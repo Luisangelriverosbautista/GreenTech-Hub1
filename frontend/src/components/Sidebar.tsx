@@ -1,5 +1,4 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import type { User } from '../types';
 
 // Iconos como componentes inline SVG para mantener todo en un archivo
