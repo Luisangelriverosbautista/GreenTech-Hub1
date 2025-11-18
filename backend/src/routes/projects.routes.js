@@ -8,7 +8,7 @@ const User = require('../models/User');
 // Obtener todos los proyectos
 router.get('/', async (req, res) => {
     try {
-        const projects = await Project.find({ status: 'active' });
+        const projects = await Project.find({ status: 'active' }).populate('creator', 'username email walletAddress');
         res.json(projects);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -56,7 +56,7 @@ router.post('/', auth, async (req, res) => {
 // Obtener un proyecto específico
 router.get('/:id', async (req, res) => {
     try {
-        const project = await Project.findById(req.params.id);
+        const project = await Project.findById(req.params.id).populate('creator', 'username email walletAddress');
         if (!project) {
             return res.status(404).json({ error: 'Proyecto no encontrado' });
         }
