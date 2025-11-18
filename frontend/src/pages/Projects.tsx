@@ -132,9 +132,17 @@ const Projects: React.FC = () => {
 
           {/* Información del Creador */}
           <div className="mb-4 pb-4 border-t border-gray-200">
-            <p className="text-xs text-gray-600">
-              <span className="font-semibold">Creador:</span> {project.creator?.username || 'Anónimo'}
-            </p>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                {(project.creator?.username || 'A').charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Creador</p>
+                <p className="text-sm font-semibold text-gray-900 truncate">
+                  {project.creator?.username || 'Anónimo'}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Botones */}
@@ -148,9 +156,9 @@ const Projects: React.FC = () => {
             </button>
             <button
               onClick={() => handleViewDetails(project._id || project.id)}
-              className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-md hover:bg-gray-200 transition-colors font-medium text-sm"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-md transition-colors font-medium text-sm flex items-center justify-center gap-1"
             >
-              Detalles
+              🔍 Detalles
             </button>
           </div>
 
