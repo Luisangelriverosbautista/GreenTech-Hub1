@@ -45,6 +45,7 @@ export interface Project {
   environmentalImpact?: {
     metric: string;
     value: string;
+    unit?: string;
   };
   milestones?: Array<{
     description: string;
@@ -52,6 +53,7 @@ export interface Project {
     completed: boolean;
     completedAt?: Date;
   }>;
+  tokenRewards?: string;
   createdAt?: string;
   updatedAt?: string;
 }
