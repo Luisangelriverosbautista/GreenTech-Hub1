@@ -91,7 +91,7 @@ const ProjectCreator: React.FC = () => {
       
       // Redirigir a la página del proyecto después de 2 segundos
       setTimeout(() => {
-        navigate(`/projects/${newProject._id || newProject.id}`);
+        navigate(`/project/${newProject._id || newProject.id}`);
       }, 2000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Error al crear el proyecto';

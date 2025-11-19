@@ -62,15 +62,26 @@ router.get('/:id', async (req, res) => {
         }
         
         // Obtener el balance actual del proyecto desde Soroban
-        const service = await getSorobanService();
-        const balance = await service.getBalance(project.walletAddress);
+        let currentBalance = project.currentAmount || '0';
+        if (project.walletAddress) {
+            try {
+                const service = await getSorobanService();
+                currentBalance = await service.getBalance(project.walletAddress);
+            } catch (sorobanError) {
+                console.warn('Error obtaining Soroban balance:', sorobanError.message);
+                // Usar el currentAmount de la BD como fallback
+                currentBalance = project.currentAmount || '0';
+            }
+        }
+        
         const projectWithBalance = {
             ...project.toObject(),
-            currentBalance: balance
+            currentBalance: currentBalance
         };
         
         res.json(projectWithBalance);
     } catch (error) {
+        console.error('Error in GET /projects/:id:', error);
         res.status(500).json({ error: error.message });
     }
 });

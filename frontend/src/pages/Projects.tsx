@@ -34,7 +34,7 @@ const Projects: React.FC = () => {
   const totalPages = Math.ceil(filteredProjects.length / projectsPerPage);
 
   const handleViewDetails = (projectId: string) => {
-    navigate(`/projects/${projectId}`);
+    navigate(`/project/${projectId}`);
   };
 
   const handleDonate = (project: any) => {
