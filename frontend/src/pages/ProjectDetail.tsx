@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useDonations } from '../hooks/useDonations';
+import { ShareProject } from '../components/ShareProject';
 import type { Project } from '../types';
 import projectService from '../services/project.service';
 
@@ -310,6 +311,15 @@ const ProjectDetail = () => {
 
               {/* Sidebar */}
               <div className="lg:col-span-1">
+                {/* Share Button - Always Visible */}
+                <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+                  <ShareProject 
+                    projectId={project._id || project.id || ''}
+                    projectTitle={project.title}
+                    projectDescription={project.description}
+                  />
+                </div>
+
                 {/* Donation Card */}
                 {user?.role === 'donor' && project.status === 'active' && (
                   <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
