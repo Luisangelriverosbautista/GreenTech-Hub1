@@ -8,9 +8,13 @@ const routes = require('./routes');
 
 const app = express();
 
-// Middleware
+// Middleware - CORS configuration
+const allowedOrigins = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+
 app.use(cors({
-  origin: 'http://localhost:5173', // URL del frontend
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
