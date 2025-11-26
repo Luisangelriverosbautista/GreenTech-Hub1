@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
 const auth = async (req, res, next) => {
     try {
         const authHeader = req.header('Authorization');
@@ -14,7 +16,7 @@ const auth = async (req, res, next) => {
         }
 
         try {
-            const verified = jwt.verify(token, process.env.JWT_SECRET);
+            const verified = jwt.verify(token, JWT_SECRET);
             console.log('[AUTH MIDDLEWARE] ✓ Token válido para userId:', verified.userId);
             req.user = verified;
             next();
