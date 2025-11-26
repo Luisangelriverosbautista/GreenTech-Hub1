@@ -17,7 +17,7 @@ class SorobanService {
   private readonly headers: { Authorization?: string; 'Content-Type': string };
 
   constructor() {
-    this.apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    this.apiUrl = import.meta.env.VITE_API_URL || 'https://greentech-hub1-2.onrender.com';
     this.headers = { 'Content-Type': 'application/json' };
   }
 
