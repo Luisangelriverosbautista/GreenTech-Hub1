@@ -18,7 +18,7 @@ export function useDonations({ projectId, autoRefresh = true }: UseDonationsProp
       setIsLoading(true);
       if (projectId) {
         // Obtener donaciones específicas de un proyecto
-        const response = await fetch(`http://localhost:3001/api/projects/${projectId}`);
+        const response = await fetch(`https://greentech-hub1-2.onrender.com/api/projects/${projectId}`);
         const data = await response.json();
         setDonations(data.donations || []);
       } else {
