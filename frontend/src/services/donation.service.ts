@@ -193,7 +193,7 @@ class DonationService {
     received: Donation[];
   }> {
     try {
-      const response = await api.get('/api/my-transactions');
+      const response = await api.get('/my-transactions');
       return response.data;
     } catch (error) {
       console.error('Error fetching my transactions:', error);
