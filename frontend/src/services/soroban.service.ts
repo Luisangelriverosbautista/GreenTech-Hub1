@@ -29,7 +29,7 @@ class SorobanService implements SorobanServiceInterface {
 
   async getBalance(address: string): Promise<string> {
     try {
-      const response = await axios.get(`${this.apiUrl}/api/wallet/balance/${address}`, { headers: this.headers });
+      const response = await axios.get(`${this.apiUrl}/wallet/balance/${address}`, { headers: this.headers });
       return response.data.balance || '0';
     } catch (error) {
       console.error('Error fetching balance:', error);
@@ -40,7 +40,7 @@ class SorobanService implements SorobanServiceInterface {
 
   async getTransactionHistory(address: string): Promise<SorobanTransaction[]> {
     try {
-      const response = await axios.get(`${this.apiUrl}/api/transactions/${address}`, { headers: this.headers });
+      const response = await axios.get(`${this.apiUrl}/transactions/${address}`, { headers: this.headers });
       return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
       console.error('Error fetching transaction history:', error);
@@ -51,7 +51,7 @@ class SorobanService implements SorobanServiceInterface {
 
   async makeDonation(fromAddress: string, toAddress: string, amount: string): Promise<SorobanTransaction> {
     const response = await axios.post(
-      `${this.apiUrl}/api/transactions/donate`,
+      `${this.apiUrl}/transactions/donate`,
       { fromAddress, toAddress, amount },
       { headers: this.headers }
     );
@@ -59,12 +59,12 @@ class SorobanService implements SorobanServiceInterface {
   }
 
   async signMessage(message: string, privateKey: string): Promise<string> {
-    const response = await axios.post(`${this.apiUrl}/api/wallet/sign`, { message, privateKey }, { headers: this.headers });
+    const response = await axios.post(`${this.apiUrl}/wallet/sign`, { message, privateKey }, { headers: this.headers });
     return response.data.signature;
   }
 
   async verifySignature(message: string, signature: string, publicKey: string): Promise<boolean> {
-    const response = await axios.post(`${this.apiUrl}/api/wallet/verify`, { message, signature, publicKey }, { headers: this.headers });
+    const response = await axios.post(`${this.apiUrl}/wallet/verify`, { message, signature, publicKey }, { headers: this.headers });
     return response.data.isValid;
   }
 }

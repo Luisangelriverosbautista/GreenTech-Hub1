@@ -76,7 +76,7 @@ class SorobanService {
   async getBalance(address: string): Promise<string> {
     try {
       const response = await axios.get(
-        `${this.apiUrl}/api/wallet/balance/${address}`,
+        `${this.apiUrl}/wallet/balance/${address}`,
         { headers: this.headers }
       );
       return response.data.balance;
@@ -89,7 +89,7 @@ class SorobanService {
   async getTransactionHistory(address: string): Promise<SorobanTransaction[]> {
     try {
       const response = await axios.get(
-        `${this.apiUrl}/api/transactions/${address}`,
+        `${this.apiUrl}/transactions/${address}`,
         { headers: this.headers }
       );
       return response.data;
@@ -102,7 +102,7 @@ class SorobanService {
   async makeDonation(fromAddress: string, toAddress: string, amount: string): Promise<SorobanTransaction> {
     try {
       const response = await axios.post(
-        `${this.apiUrl}/api/transactions/donate`,
+        `${this.apiUrl}/transactions/donate`,
         {
           fromAddress,
           toAddress,

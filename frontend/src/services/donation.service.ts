@@ -171,7 +171,7 @@ class DonationService {
 
       // Registrar en DB
       console.log('[makeDonation] 💾 Registering in database...');
-      const response = await api.post(`/api/projects/${projectId}/donate`, {
+      const response = await api.post(`/projects/${projectId}/donate`, {
         amount,
         txHash: txResult.hash
       });
