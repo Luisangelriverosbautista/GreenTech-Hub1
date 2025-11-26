@@ -6,33 +6,36 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 exports.register = async (req, res) => {
   try {
+    console.log('[REGISTER] Iniciando registro con datos:', { email: req.body.email, role: req.body.role });
     const { email, password, name, role } = req.body;
 
     // Validar campos requeridos
-    if (!email || !password || !name) {
+    if (!email || !password || !name || !role) {
+      console.log('[REGISTER] Validación fallida - campos faltantes');
       return res.status(400).json({ message: 'Todos los campos son requeridos' });
     }
 
     // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      console.log('[REGISTER] Validación fallida - email inválido');
       return res.status(400).json({ message: 'Formato de email inválido' });
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log('[REGISTER] Usuario ya existe:', email);
       return res.status(400).json({ message: 'El usuario ya existe' });
     }
 
     // Validar contraseña
     if (password.length < 6) {
+      console.log('[REGISTER] Validación fallida - contraseña muy corta');
       return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres' });
     }
 
     // Create user
-    // Nota: El modelo User tiene un hook pre('save') que ya hace el hash de la contraseña.
-    // Por lo tanto aquí almacenamos la contraseña en texto y dejamos que el hook la encripte.
     const user = new User({
       email,
       password,
@@ -41,6 +44,7 @@ exports.register = async (req, res) => {
     });
 
     await user.save();
+    console.log('[REGISTER] Usuario creado:', user._id);
 
     // Generate token
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '24h' });
@@ -49,40 +53,46 @@ exports.register = async (req, res) => {
     const userResponse = user.toObject();
     delete userResponse.password;
 
+    console.log('[REGISTER] ✓ Registro exitoso');
     res.status(201).json({
       user: userResponse,
       token
     });
   } catch (error) {
-    console.error('Error en registro:', error);
-    res.status(500).json({ message: 'Error en el servidor' });
+    console.error('[REGISTER] ✗ Error en registro:', error.message);
+    res.status(500).json({ message: 'Error en el servidor: ' + error.message });
   }
 };
 
 exports.login = async (req, res) => {
   try {
+    console.log('[LOGIN] Iniciando login con email:', req.body.email);
     const { email, password } = req.body;
 
     // Validar campos requeridos
     if (!email || !password) {
+      console.log('[LOGIN] Validación fallida - email o contraseña faltante');
       return res.status(400).json({ message: 'Email y contraseña son requeridos' });
     }
 
     // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      console.log('[LOGIN] Validación fallida - email inválido');
       return res.status(400).json({ message: 'Formato de email inválido' });
     }
 
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('[LOGIN] Usuario no encontrado:', email);
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log('[LOGIN] Contraseña incorrecta para:', email);
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
@@ -93,13 +103,14 @@ exports.login = async (req, res) => {
     const userResponse = user.toObject();
     delete userResponse.password;
 
+    console.log('[LOGIN] ✓ Login exitoso para:', email);
     res.json({
       user: userResponse,
       token
     });
   } catch (error) {
-    console.error('Error en login:', error);
-    res.status(500).json({ message: 'Error en el servidor' });
+    console.error('[LOGIN] ✗ Error en login:', error.message);
+    res.status(500).json({ message: 'Error en el servidor: ' + error.message });
   }
 };
 
