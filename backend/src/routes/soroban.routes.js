@@ -17,11 +17,15 @@ router.post('/wallet/generate', async (req, res) => {
 // Obtener el balance de una wallet
 router.get('/wallet/balance/:address', async (req, res) => {
     try {
+        console.log('[wallet/balance] Getting balance for:', req.params.address);
         const service = await getSorobanService();
         const balance = await service.getBalance(req.params.address);
+        console.log('[wallet/balance] ✓ Balance:', balance);
         res.json({ balance });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('[wallet/balance] ✗ Error:', error.message);
+        // Return 0 instead of error to prevent UI logout
+        res.json({ balance: '0' });
     }
 });
 
@@ -40,11 +44,30 @@ router.post('/transactions/donate', auth, async (req, res) => {
 // Obtener historial de transacciones
 router.get('/transactions/history/:address', async (req, res) => {
     try {
+        console.log('[transactions/history] Getting transactions for:', req.params.address);
         const service = await getSorobanService();
         const history = await service.getTransactionHistory(req.params.address);
-        res.json(history);
+        console.log('[transactions/history] ✓ History:', history?.length || 0);
+        res.json(history || []);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('[transactions/history] ✗ Error:', error.message);
+        // Return empty array instead of error to prevent UI logout
+        res.json([]);
+    }
+});
+
+// Obtener historial de transacciones (alias sin /history)
+router.get('/transactions/:address', async (req, res) => {
+    try {
+        console.log('[transactions] Getting transactions for:', req.params.address);
+        const service = await getSorobanService();
+        const history = await service.getTransactionHistory(req.params.address);
+        console.log('[transactions] ✓ History:', history?.length || 0);
+        res.json(history || []);
+    } catch (error) {
+        console.error('[transactions] ✗ Error:', error.message);
+        // Return empty array instead of error to prevent UI logout
+        res.json([]);
     }
 });
 
