@@ -8,7 +8,7 @@ const getSorobanService = require('../../soroban/soroban.service');
 const BigNumber = require('bignumber.js');
 
 // 1. Obtener TODOS los proyectos activos con su progreso
-router.get('/api/projects', async (req, res) => {
+router.get('/projects', async (req, res) => {
     try {
         const projects = await Project.find({ status: { $in: ['active', 'funded'] } })
             .populate('creator', 'username walletAddress')
@@ -44,7 +44,7 @@ router.get('/api/projects', async (req, res) => {
 });
 
 // 2. Obtener UN proyecto específico con detalles
-router.get('/api/projects/:projectId', async (req, res) => {
+router.get('/projects/:projectId', async (req, res) => {
     try {
         const project = await Project.findById(req.params.projectId)
             .populate('creator', 'username walletAddress');
@@ -77,7 +77,7 @@ router.get('/api/projects/:projectId', async (req, res) => {
 
 // 3. Realizar una DONACIÓN a un proyecto
 // NOTA: Esta es una versión simplificada donde el frontend firma la transacción con Freighter
-router.post('/api/projects/:projectId/donate', auth, async (req, res) => {
+router.post('/projects/:projectId/donate', auth, async (req, res) => {
     try {
         const { projectId } = req.params;
         const { amount, txHash } = req.body;
@@ -159,7 +159,7 @@ router.post('/api/projects/:projectId/donate', auth, async (req, res) => {
 });
 
 // 4. Obtener historial de DONACIONES recibidas por un usuario
-router.get('/api/users/:userId/donations-received', async (req, res) => {
+router.get('/users/:userId/donations-received', async (req, res) => {
     try {
         const transactions = await Transaction.find({
             to: req.params.userId,
@@ -184,7 +184,7 @@ router.get('/api/users/:userId/donations-received', async (req, res) => {
 });
 
 // 5. Obtener historial de DONACIONES realizadas por un usuario
-router.get('/api/users/:userId/donations-made', async (req, res) => {
+router.get('/users/:userId/donations-made', async (req, res) => {
     try {
         const transactions = await Transaction.find({
             from: req.params.userId,
@@ -209,7 +209,7 @@ router.get('/api/users/:userId/donations-made', async (req, res) => {
 });
 
 // 6. Obtener transacciones del usuario actual (autenticado)
-router.get('/api/my-transactions', auth, async (req, res) => {
+router.get('/my-transactions', auth, async (req, res) => {
     try {
         const user = await User.findById(req.user.userId);
         
