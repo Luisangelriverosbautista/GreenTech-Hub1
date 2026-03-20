@@ -26,6 +26,12 @@ const TransactionsIcon = () => (
   </svg>
 );
 
+const ContentIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.55-2.275A1 1 0 0121 8.618v6.764a1 1 0 01-1.45.893L15 14m-6 5h5a2 2 0 002-2V7a2 2 0 00-2-2H9a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+  </svg>
+);
+
 const CreateProjectIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/>
@@ -100,6 +106,14 @@ export const Sidebar = ({ user, collapsed = false }: SidebarProps) => {
             isActive={isActive('/wallet')}
           >
             {!collapsed && 'Wallet'}
+          </NavItem>
+
+          <NavItem
+            to="/content"
+            icon={<ContentIcon />}
+            isActive={isActive('/content')}
+          >
+            {!collapsed && 'Contenido'}
           </NavItem>
 
           {user.role === 'donor' && (

@@ -9,6 +9,7 @@ import ProjectDetail from './pages/ProjectDetail'
 import ProjectCreator from './pages/ProjectCreator'
 import Dashboard from './pages/Dashboard'
 import Wallet from './pages/Wallet'
+import ContentHub from './pages/ContentHub'
 import About from './pages/About'
 import Contact from './pages/Contact'
 
@@ -64,6 +65,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Wallet />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/content"
+            element={
+              <PrivateRoute>
+                <ContentHub />
               </PrivateRoute>
             }
           />

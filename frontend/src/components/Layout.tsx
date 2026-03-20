@@ -53,6 +53,9 @@ export const Layout = ({ children }: LayoutProps) => {
                 <Link to="/wallet" className="text-gray-600 hover:text-green-600 font-medium transition">
                   💰 Wallet
                 </Link>
+                <Link to="/content" className="text-gray-600 hover:text-green-600 font-medium transition">
+                  🎥 Contenido
+                </Link>
               </div>
             )}
 
