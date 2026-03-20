@@ -6,7 +6,7 @@ import { useDonations } from '../hooks/useDonations';
 import { ShareProject } from '../components/ShareProject';
 import type { Project } from '../types';
 import projectService from '../services/project.service';
-import { escrowService, type Escrow } from '../services/escrow.service';
+import { escrowService, type Escrow, type ProgressUpdate } from '../services/escrow.service';
 import { getAddress } from '@stellar/freighter-api';
 
 const ProjectDetail = () => {
@@ -26,6 +26,17 @@ const ProjectDetail = () => {
   const [projectEscrows, setProjectEscrows] = useState<Escrow[]>([]);
   const [isEscrowsLoading, setIsEscrowsLoading] = useState(false);
   const [escrowActionInProgressId, setEscrowActionInProgressId] = useState<string | null>(null);
+  const [progressUpdates, setProgressUpdates] = useState<ProgressUpdate[]>([]);
+  const [isProgressLoading, setIsProgressLoading] = useState(false);
+  const [progressSubmitting, setProgressSubmitting] = useState(false);
+  const [progressForm, setProgressForm] = useState({
+    title: '',
+    description: '',
+    evidenceCsv: '',
+    progressPercent: '0',
+    milestoneIndex: '0',
+    requestedAmount: ''
+  });
 
   useEffect(() => {
     if (id) {
@@ -156,11 +167,137 @@ const ProjectDetail = () => {
     }
   };
 
+  const activeEscrow = projectEscrows.find(e => ['funded', 'approved', 'partially-released'].includes(e.status)) || projectEscrows[0] || null;
+  const activeEscrowDonorId = activeEscrow ? (activeEscrow.donor?._id || activeEscrow.donor?.id) : null;
+  const activeEscrowCreatorId = activeEscrow ? (activeEscrow.creator?._id || activeEscrow.creator?.id) : null;
+  const currentUserId = user?.id || null;
+  const canSubmitProgress = Boolean(activeEscrow && currentUserId && activeEscrowCreatorId && currentUserId === activeEscrowCreatorId);
+  const canReviewProgress = Boolean(activeEscrow && currentUserId && activeEscrowDonorId && currentUserId === activeEscrowDonorId);
+
+  const loadProgressUpdates = async (escrowId: string) => {
+    try {
+      setIsProgressLoading(true);
+      const response = await escrowService.getProgressUpdates(escrowId);
+      setProgressUpdates(response.updates || []);
+    } catch (progressError) {
+      console.error('Error al cargar avances:', progressError);
+      setProgressUpdates([]);
+    } finally {
+      setIsProgressLoading(false);
+    }
+  };
+
+  const handleSubmitProgressUpdate = async () => {
+    if (!activeEscrow) return;
+
+    try {
+      setProgressSubmitting(true);
+      setActionError(null);
+      setActionMessage(null);
+
+      const evidenceUrls = progressForm.evidenceCsv
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean);
+
+      await escrowService.createProgressUpdate(activeEscrow._id, {
+        title: progressForm.title.trim(),
+        description: progressForm.description.trim(),
+        evidenceUrls,
+        progressPercent: Number(progressForm.progressPercent || 0),
+        milestoneIndex: Number(progressForm.milestoneIndex || 0),
+        requestedAmount: progressForm.requestedAmount ? String(progressForm.requestedAmount) : undefined
+      });
+
+      setProgressForm({
+        title: '',
+        description: '',
+        evidenceCsv: '',
+        progressPercent: '0',
+        milestoneIndex: '0',
+        requestedAmount: ''
+      });
+
+      setActionMessage('Avance enviado correctamente. Pendiente de aprobación del donante.');
+      await loadProgressUpdates(activeEscrow._id);
+    } catch (submitError) {
+      console.error('Error al enviar avance:', submitError);
+      if (axios.isAxiosError(submitError)) {
+        const backendMessage = (submitError.response?.data as any)?.error || (submitError.response?.data as any)?.details;
+        setActionError(backendMessage || 'No se pudo enviar el avance');
+      } else {
+        setActionError('No se pudo enviar el avance');
+      }
+    } finally {
+      setProgressSubmitting(false);
+    }
+  };
+
+  const handleApproveProgressUpdate = async (updateId: string) => {
+    if (!activeEscrow || !id) return;
+
+    try {
+      setActionError(null);
+      setActionMessage(null);
+      await escrowService.approveProgressUpdate(activeEscrow._id, updateId);
+      await Promise.all([loadProgressUpdates(activeEscrow._id), loadEscrows(id), loadProject(id)]);
+      setActionMessage('Avance aprobado y fondos liberados para ese hito.');
+    } catch (approveError) {
+      console.error('Error al aprobar avance:', approveError);
+      if (axios.isAxiosError(approveError)) {
+        const backendMessage = (approveError.response?.data as any)?.error || (approveError.response?.data as any)?.details;
+        setActionError(backendMessage || 'No se pudo aprobar el avance');
+      } else {
+        setActionError('No se pudo aprobar el avance');
+      }
+    }
+  };
+
+  const handleRejectProgressUpdate = async (updateId: string) => {
+    if (!activeEscrow) return;
+
+    const note = window.prompt('Motivo del rechazo (opcional):', '') || '';
+
+    try {
+      setActionError(null);
+      setActionMessage(null);
+      await escrowService.rejectProgressUpdate(activeEscrow._id, updateId, note);
+      await loadProgressUpdates(activeEscrow._id);
+      setActionMessage('Avance rechazado. No se liberaron fondos.');
+    } catch (rejectError) {
+      console.error('Error al rechazar avance:', rejectError);
+      if (axios.isAxiosError(rejectError)) {
+        const backendMessage = (rejectError.response?.data as any)?.error || (rejectError.response?.data as any)?.details;
+        setActionError(backendMessage || 'No se pudo rechazar el avance');
+      } else {
+        setActionError('No se pudo rechazar el avance');
+      }
+    }
+  };
+
   useEffect(() => {
     if (id && user) {
       loadEscrows(id);
     }
   }, [id, user]);
+
+  useEffect(() => {
+    if (activeEscrow?._id) {
+      loadProgressUpdates(activeEscrow._id);
+    } else {
+      setProgressUpdates([]);
+    }
+  }, [activeEscrow?._id]);
+
+  const getProgressStatusLabel = (status: ProgressUpdate['status']) => {
+    const map: Record<ProgressUpdate['status'], string> = {
+      submitted: 'Pendiente de revisión',
+      approved: 'Aprobado',
+      rejected: 'Rechazado',
+      released: 'Liberado'
+    };
+    return map[status] || status;
+  };
 
   const getEscrowStatusLabel = (status: Escrow['status']) => {
     const labels: Record<Escrow['status'], string> = {
@@ -454,6 +591,128 @@ const ProjectDetail = () => {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Progress Updates */}
+                {activeEscrow && (
+                  <div className="bg-white rounded-lg shadow-lg p-6">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                      Avances del Proyecto (Escrow)
+                    </h2>
+
+                    {canSubmitProgress && (
+                      <div className="mb-6 border border-emerald-200 bg-emerald-50 rounded-lg p-4 space-y-3">
+                        <p className="text-sm font-semibold text-emerald-800">Enviar nuevo avance</p>
+                        <input
+                          type="text"
+                          placeholder="Título del avance"
+                          value={progressForm.title}
+                          onChange={e => setProgressForm(prev => ({ ...prev, title: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded"
+                        />
+                        <textarea
+                          placeholder="Describe qué se avanzó..."
+                          value={progressForm.description}
+                          onChange={e => setProgressForm(prev => ({ ...prev, description: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded"
+                          rows={3}
+                        />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            placeholder="% avance"
+                            value={progressForm.progressPercent}
+                            onChange={e => setProgressForm(prev => ({ ...prev, progressPercent: e.target.value }))}
+                            className="px-3 py-2 border border-gray-300 rounded"
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Índice hito"
+                            value={progressForm.milestoneIndex}
+                            onChange={e => setProgressForm(prev => ({ ...prev, milestoneIndex: e.target.value }))}
+                            className="px-3 py-2 border border-gray-300 rounded"
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            placeholder="Monto solicitado (XLM)"
+                            value={progressForm.requestedAmount}
+                            onChange={e => setProgressForm(prev => ({ ...prev, requestedAmount: e.target.value }))}
+                            className="px-3 py-2 border border-gray-300 rounded"
+                          />
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="URLs de evidencia separadas por coma"
+                          value={progressForm.evidenceCsv}
+                          onChange={e => setProgressForm(prev => ({ ...prev, evidenceCsv: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded"
+                        />
+                        <button
+                          onClick={handleSubmitProgressUpdate}
+                          disabled={!progressForm.title.trim() || !progressForm.description.trim() || progressSubmitting}
+                          className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          {progressSubmitting ? 'Enviando...' : 'Enviar Avance'}
+                        </button>
+                      </div>
+                    )}
+
+                    {isProgressLoading ? (
+                      <p className="text-sm text-gray-600">Cargando avances...</p>
+                    ) : progressUpdates.length === 0 ? (
+                      <p className="text-sm text-gray-600">No hay avances registrados para este escrow.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {progressUpdates.map(update => (
+                          <div key={update._id} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="font-semibold text-gray-900">{update.title}</p>
+                              <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
+                                {getProgressStatusLabel(update.status)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700 mb-2">{update.description}</p>
+                            <p className="text-xs text-gray-600 mb-2">
+                              Hito #{update.milestoneIndex} · Avance {update.progressPercent}%
+                              {update.requestedAmount ? ` · Solicita ${update.requestedAmount} XLM` : ''}
+                            </p>
+
+                            {Array.isArray(update.evidenceUrls) && update.evidenceUrls.length > 0 && (
+                              <div className="mb-3 space-y-1">
+                                {update.evidenceUrls.map((url, idx) => (
+                                  <a key={`${update._id}-${idx}`} href={url} target="_blank" rel="noreferrer" className="block text-xs text-blue-700 hover:underline break-all">
+                                    Evidencia {idx + 1}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+
+                            {canReviewProgress && update.status === 'submitted' && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleApproveProgressUpdate(update._id)}
+                                  className="px-3 py-2 text-sm font-semibold rounded bg-green-100 text-green-800 hover:bg-green-200"
+                                >
+                                  Aprobar y Liberar
+                                </button>
+                                <button
+                                  onClick={() => handleRejectProgressUpdate(update._id)}
+                                  className="px-3 py-2 text-sm font-semibold rounded bg-red-100 text-red-800 hover:bg-red-200"
+                                >
+                                  Rechazar
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

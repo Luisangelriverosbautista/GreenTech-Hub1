@@ -4,6 +4,7 @@ const auth = require('./../middleware/auth');
 const Project = require('../models/Project');
 const Transaction = require('../models/Transaction');
 const Escrow = require('../models/Escrow');
+const ProgressUpdate = require('../models/ProgressUpdate');
 const User = require('../models/User');
 const getSorobanService = require('../../soroban/soroban.service');
 const trustlessWorkService = require('../services/trustlesswork.service');
@@ -17,6 +18,19 @@ const isTrustlessAuthError = (errorMessage = '') => {
 
 const getErrorMessage = (error) => {
     return error?.message || 'Unknown error';
+};
+
+const getEscrowReleaseAmount = (escrow, milestoneIndex = 0, requestedAmount = null) => {
+    if (requestedAmount) {
+        return String(requestedAmount);
+    }
+
+    if (escrow.mode === 'multi-release' && escrow.milestones[milestoneIndex]) {
+        return String(escrow.milestones[milestoneIndex].amount);
+    }
+
+    const remaining = new BigNumber(escrow.amountTotal || '0').minus(escrow.amountReleased || '0');
+    return remaining.isGreaterThan(0) ? remaining.toString() : '0';
 };
 
 // 1. Obtener TODOS los proyectos activos con su progreso
@@ -515,6 +529,278 @@ router.post('/escrows/:escrowId/release', auth, async (req, res) => {
     } catch (error) {
         console.error('[Escrow Release] Error:', error.message);
         res.status(500).json({ error: error.message || 'Error al liberar fondos' });
+    }
+});
+
+// 3.5 Creador envía actualización de avance (FASE 3)
+router.post('/escrows/:escrowId/progress-updates', auth, async (req, res) => {
+    try {
+        const { escrowId } = req.params;
+        const {
+            title,
+            description,
+            evidenceUrls = [],
+            progressPercent = 0,
+            milestoneIndex = 0,
+            requestedAmount = null
+        } = req.body;
+
+        if (!title || !description) {
+            return res.status(400).json({ error: 'title y description son requeridos' });
+        }
+
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        const escrow = await Escrow.findById(escrowId);
+        if (!escrow) {
+            return res.status(404).json({ error: 'Escrow no encontrado' });
+        }
+
+        if (String(escrow.creator) !== String(user._id)) {
+            return res.status(403).json({ error: 'Solo el creador puede enviar avances' });
+        }
+
+        const update = await ProgressUpdate.create({
+            escrow: escrow._id,
+            project: escrow.project,
+            milestoneIndex,
+            title: String(title).trim(),
+            description: String(description).trim(),
+            evidenceUrls: Array.isArray(evidenceUrls) ? evidenceUrls : [],
+            progressPercent: Number(progressPercent) || 0,
+            requestedAmount: requestedAmount ? String(requestedAmount) : null,
+            submittedBy: user._id
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Avance enviado. Pendiente de aprobación del donante.',
+            progressUpdate: update
+        });
+    } catch (error) {
+        console.error('[Progress Update Create] Error:', error.message);
+        res.status(500).json({ error: error.message || 'Error al crear avance' });
+    }
+});
+
+// 3.6 Listar actualizaciones de avance
+router.get('/escrows/:escrowId/progress-updates', auth, async (req, res) => {
+    try {
+        const { escrowId } = req.params;
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        const escrow = await Escrow.findById(escrowId);
+        if (!escrow) {
+            return res.status(404).json({ error: 'Escrow no encontrado' });
+        }
+
+        const isParticipant = String(escrow.donor) === String(user._id) || String(escrow.creator) === String(user._id);
+        if (!isParticipant) {
+            return res.status(403).json({ error: 'No autorizado para ver avances de este escrow' });
+        }
+
+        const updates = await ProgressUpdate.find({ escrow: escrow._id })
+            .populate('submittedBy', 'name email')
+            .populate('reviewedBy', 'name email')
+            .sort({ createdAt: -1 });
+
+        res.json({
+            count: updates.length,
+            updates
+        });
+    } catch (error) {
+        console.error('[Progress Update List] Error:', error.message);
+        res.status(500).json({ error: error.message || 'Error al listar avances' });
+    }
+});
+
+// 3.7 Aprobar avance y liberar fondos
+router.post('/escrows/:escrowId/progress-updates/:updateId/approve', auth, async (req, res) => {
+    try {
+        const { escrowId, updateId } = req.params;
+
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        const escrow = await Escrow.findById(escrowId);
+        if (!escrow) {
+            return res.status(404).json({ error: 'Escrow no encontrado' });
+        }
+
+        if (String(escrow.donor) !== String(user._id)) {
+            return res.status(403).json({ error: 'Solo el donante puede aprobar avances' });
+        }
+
+        const update = await ProgressUpdate.findById(updateId);
+        if (!update || String(update.escrow) !== String(escrow._id)) {
+            return res.status(404).json({ error: 'Actualización no encontrada para este escrow' });
+        }
+
+        if (update.status !== 'submitted') {
+            return res.status(409).json({ error: 'Esta actualización ya fue procesada' });
+        }
+
+        const project = await Project.findById(escrow.project);
+        if (!project) {
+            return res.status(404).json({ error: 'Proyecto asociado no encontrado' });
+        }
+
+        const releaseAmount = getEscrowReleaseAmount(escrow, update.milestoneIndex, update.requestedAmount);
+        if (new BigNumber(releaseAmount).isLessThanOrEqualTo(0)) {
+            return res.status(400).json({ error: 'No hay monto pendiente para liberar' });
+        }
+
+        const providerPayload = {
+            escrowId: escrow.trustlessEscrowId,
+            contractId: escrow.contractId,
+            milestoneIndex: update.milestoneIndex,
+            amount: releaseAmount
+        };
+
+        let providerResponse;
+        try {
+            providerResponse = escrow.mode === 'multi-release'
+                ? await trustlessWorkService.releaseMultiReleaseMilestoneFunds(providerPayload)
+                : await trustlessWorkService.releaseSingleReleaseFunds(providerPayload);
+        } catch (providerError) {
+            const providerMessage = getErrorMessage(providerError);
+
+            if (isTrustlessAuthError(providerMessage) && shouldFallbackOnAuthError()) {
+                providerResponse = trustlessWorkService.createMockResponse('release-from-progress-fallback', {
+                    ...providerPayload,
+                    fallbackReason: providerMessage
+                });
+            } else {
+                return res.status(502).json({
+                    error: 'No se pudo liberar fondos en proveedor escrow',
+                    details: providerMessage
+                });
+            }
+        }
+
+        const newReleasedAmount = new BigNumber(escrow.amountReleased).plus(releaseAmount).toString();
+        escrow.amountReleased = newReleasedAmount;
+        escrow.lastSyncedAt = new Date();
+
+        if (escrow.mode === 'multi-release' && escrow.milestones[update.milestoneIndex]) {
+            escrow.milestones[update.milestoneIndex].status = 'released';
+            escrow.milestones[update.milestoneIndex].releasedAt = new Date();
+            escrow.status = new BigNumber(newReleasedAmount).isGreaterThanOrEqualTo(escrow.amountTotal)
+                ? 'released'
+                : 'partially-released';
+        } else {
+            escrow.status = new BigNumber(newReleasedAmount).isGreaterThanOrEqualTo(escrow.amountTotal)
+                ? 'released'
+                : 'partially-released';
+        }
+
+        escrow.trustlessResponse = {
+            ...escrow.trustlessResponse,
+            lastReleaseFromProgress: providerResponse
+        };
+        await escrow.save();
+
+        project.currentAmount = new BigNumber(project.currentAmount || '0').plus(releaseAmount).toString();
+        if (new BigNumber(project.currentAmount).isGreaterThanOrEqualTo(project.targetAmount)) {
+            project.status = 'funded';
+        }
+
+        if (Array.isArray(project.milestones) && project.milestones[update.milestoneIndex]) {
+            project.milestones[update.milestoneIndex].completed = true;
+            project.milestones[update.milestoneIndex].completedAt = new Date();
+        }
+        await project.save();
+
+        update.status = 'released';
+        update.reviewedBy = user._id;
+        update.reviewedAt = new Date();
+        update.reviewNote = 'Aprobado y liberado';
+        update.releaseTxHash = escrow.contractId || escrow.trustlessEscrowId;
+        await update.save();
+
+        await Transaction.create({
+            type: 'escrow_release',
+            amount: releaseAmount,
+            from: escrow.donor,
+            to: escrow.creator,
+            project: escrow.project,
+            status: 'completed',
+            txHash: escrow.contractId || escrow.trustlessEscrowId,
+            sorobanResponse: {
+                provider: 'trustlesswork',
+                escrowId: escrow.trustlessEscrowId,
+                action: 'release-from-progress-update',
+                updateId: update._id,
+                providerResponse
+            }
+        });
+
+        res.json({
+            success: true,
+            message: 'Avance aprobado y fondos liberados correctamente',
+            progressUpdate: update,
+            escrow,
+            projectCurrentAmount: project.currentAmount,
+            projectStatus: project.status,
+            providerResponse
+        });
+    } catch (error) {
+        console.error('[Progress Update Approve] Error:', error.message);
+        res.status(500).json({ error: error.message || 'Error al aprobar avance' });
+    }
+});
+
+// 3.8 Rechazar avance
+router.post('/escrows/:escrowId/progress-updates/:updateId/reject', auth, async (req, res) => {
+    try {
+        const { escrowId, updateId } = req.params;
+        const { reviewNote = '' } = req.body;
+
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        const escrow = await Escrow.findById(escrowId);
+        if (!escrow) {
+            return res.status(404).json({ error: 'Escrow no encontrado' });
+        }
+
+        if (String(escrow.donor) !== String(user._id)) {
+            return res.status(403).json({ error: 'Solo el donante puede rechazar avances' });
+        }
+
+        const update = await ProgressUpdate.findById(updateId);
+        if (!update || String(update.escrow) !== String(escrow._id)) {
+            return res.status(404).json({ error: 'Actualización no encontrada para este escrow' });
+        }
+
+        if (update.status !== 'submitted') {
+            return res.status(409).json({ error: 'Esta actualización ya fue procesada' });
+        }
+
+        update.status = 'rejected';
+        update.reviewedBy = user._id;
+        update.reviewedAt = new Date();
+        update.reviewNote = String(reviewNote || '').trim();
+        await update.save();
+
+        res.json({
+            success: true,
+            message: 'Avance rechazado. No se liberaron fondos.',
+            progressUpdate: update
+        });
+    } catch (error) {
+        console.error('[Progress Update Reject] Error:', error.message);
+        res.status(500).json({ error: error.message || 'Error al rechazar avance' });
     }
 });
 

@@ -45,6 +45,30 @@ export interface EscrowActionResponse {
   providerResponse: unknown;
 }
 
+export interface ProgressUpdate {
+  _id: string;
+  escrow: string;
+  project: string;
+  milestoneIndex: number;
+  title: string;
+  description: string;
+  evidenceUrls: string[];
+  progressPercent: number;
+  requestedAmount?: string;
+  status: 'submitted' | 'approved' | 'rejected' | 'released';
+  reviewNote?: string;
+  createdAt: string;
+}
+
+export interface ProgressUpdatePayload {
+  title: string;
+  description: string;
+  evidenceUrls?: string[];
+  progressPercent?: number;
+  milestoneIndex?: number;
+  requestedAmount?: string;
+}
+
 class EscrowService {
   async donateWithEscrow(projectId: string, payload: CreateEscrowDonationPayload): Promise<EscrowDonationResponse> {
     const response = await api.post(`/projects/${projectId}/donate-escrow`, payload);
@@ -74,6 +98,26 @@ class EscrowService {
 
   async releaseEscrowFunds(escrowId: string, milestoneIndex = 0): Promise<EscrowActionResponse> {
     const response = await api.post(`/escrows/${escrowId}/release`, { milestoneIndex });
+    return response.data;
+  }
+
+  async getProgressUpdates(escrowId: string): Promise<{ count: number; updates: ProgressUpdate[] }> {
+    const response = await api.get(`/escrows/${escrowId}/progress-updates`);
+    return response.data;
+  }
+
+  async createProgressUpdate(escrowId: string, payload: ProgressUpdatePayload): Promise<{ success: boolean; message: string; progressUpdate: ProgressUpdate }> {
+    const response = await api.post(`/escrows/${escrowId}/progress-updates`, payload);
+    return response.data;
+  }
+
+  async approveProgressUpdate(escrowId: string, updateId: string): Promise<{ success: boolean; message: string; progressUpdate: ProgressUpdate }> {
+    const response = await api.post(`/escrows/${escrowId}/progress-updates/${updateId}/approve`);
+    return response.data;
+  }
+
+  async rejectProgressUpdate(escrowId: string, updateId: string, reviewNote: string): Promise<{ success: boolean; message: string; progressUpdate: ProgressUpdate }> {
+    const response = await api.post(`/escrows/${escrowId}/progress-updates/${updateId}/reject`, { reviewNote });
     return response.data;
   }
 }
