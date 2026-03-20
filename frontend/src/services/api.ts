@@ -29,13 +29,24 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const requestUrl = String(error.config?.url || '');
+    const status = error.response?.status;
+
+    // Escrow endpoints may return 404 while backend rollout is pending.
+    // Keep the rejection behavior, but avoid noisy global logging for this known case.
+    const isKnownEscrow404 = status === 404 && requestUrl.includes('/escrows');
+
     // Si el token expiró o es inválido
-    if (error.response?.status === 401) {
+    if (status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
-    console.error('Response error:', error.response?.data || error.message);
+
+    if (!isKnownEscrow404) {
+      console.error('Response error:', error.response?.data || error.message);
+    }
+
     return Promise.reject(error);
   }
 );

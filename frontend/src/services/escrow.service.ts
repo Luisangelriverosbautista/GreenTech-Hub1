@@ -52,6 +52,10 @@ class EscrowService {
   }
 
   async getProjectEscrows(projectId: string): Promise<{ count: number; escrows: unknown[] }> {
+    if (!localStorage.getItem('token')) {
+      return { count: 0, escrows: [] };
+    }
+
     try {
       const response = await api.get(`/projects/${projectId}/escrows`);
       return response.data;

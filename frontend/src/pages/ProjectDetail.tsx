@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
 import { useDonations } from '../hooks/useDonations';
 import { ShareProject } from '../components/ShareProject';
@@ -15,7 +16,9 @@ const ProjectDetail = () => {
   const { makeDonation, isDonating } = useDonations();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [donationAmount, setDonationAmount] = useState('');
   const [donationSuccess, setDonationSuccess] = useState(false);
   const [escrowSuccess, setEscrowSuccess] = useState(false);
@@ -35,9 +38,9 @@ const ProjectDetail = () => {
       setIsLoading(true);
       const data = await projectService.getProject(projectId);
       setProject(data);
-      setError(null);
+      setLoadError(null);
     } catch {
-      setError('Error al cargar el proyecto');
+      setLoadError('Error al cargar el proyecto');
     } finally {
       setIsLoading(false);
     }
@@ -59,6 +62,8 @@ const ProjectDetail = () => {
     if (!user || !project || !donationAmount || !project.walletAddress) return;
 
     try {
+      setActionError(null);
+      setActionMessage(null);
       await makeDonation(
         project._id || project.id || '',
         donationAmount.toString(),
@@ -70,7 +75,7 @@ const ProjectDetail = () => {
       await loadProject(id!);
     } catch (error: unknown) {
       console.error('Error en la donación:', error);
-      setError('Error al procesar la donación');
+      setActionError('Error al procesar la donación');
     }
   };
 
@@ -79,6 +84,8 @@ const ProjectDetail = () => {
 
     try {
       setIsEscrowDonating(true);
+      setActionError(null);
+      setActionMessage(null);
 
       const walletResult = await getAddress();
       if (walletResult.error || !walletResult.address) {
@@ -95,13 +102,19 @@ const ProjectDetail = () => {
       });
 
       setEscrowSuccess(true);
+      setActionMessage('Escrow creado correctamente. Ya puedes aprobar y liberar fondos según el rol.');
       setDonationAmount('');
       setTimeout(() => setEscrowSuccess(false), 5000);
       await loadProject(id!);
       await loadEscrows(id!);
     } catch (escrowError: unknown) {
       console.error('Error en la donación con escrow:', escrowError);
-      setError('Error al procesar la donación con escrow');
+      if (axios.isAxiosError(escrowError)) {
+        const backendMessage = (escrowError.response?.data as any)?.error || (escrowError.response?.data as any)?.details;
+        setActionError(backendMessage || 'Error al procesar la donación con escrow');
+      } else {
+        setActionError('Error al procesar la donación con escrow');
+      }
     } finally {
       setIsEscrowDonating(false);
     }
@@ -112,11 +125,14 @@ const ProjectDetail = () => {
 
     try {
       setEscrowActionInProgressId(escrowId);
+      setActionError(null);
+      setActionMessage(null);
       await escrowService.approveEscrow(escrowId, 0);
       await loadEscrows(id);
+      setActionMessage('Escrow aprobado. El siguiente paso es liberar fondos.');
     } catch (approveError) {
       console.error('Error al aprobar escrow:', approveError);
-      setError('No se pudo aprobar el escrow');
+      setActionError('No se pudo aprobar el escrow');
     } finally {
       setEscrowActionInProgressId(null);
     }
@@ -127,11 +143,14 @@ const ProjectDetail = () => {
 
     try {
       setEscrowActionInProgressId(escrowId);
+      setActionError(null);
+      setActionMessage(null);
       await escrowService.releaseEscrowFunds(escrowId, 0);
       await Promise.all([loadEscrows(id), loadProject(id)]);
+      setActionMessage('Fondos liberados correctamente y balance del proyecto actualizado.');
     } catch (releaseError) {
       console.error('Error al liberar escrow:', releaseError);
-      setError('No se pudo liberar el escrow');
+      setActionError('No se pudo liberar el escrow');
     } finally {
       setEscrowActionInProgressId(null);
     }
@@ -189,7 +208,7 @@ const ProjectDetail = () => {
     );
   }
 
-  if (error || !project) {
+  if (loadError || !project) {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4">
@@ -200,7 +219,7 @@ const ProjectDetail = () => {
             ← Volver a Proyectos
           </button>
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
-            <p className="font-semibold">{error || 'Proyecto no encontrado'}</p>
+            <p className="font-semibold">{loadError || 'Proyecto no encontrado'}</p>
           </div>
         </div>
       </div>
@@ -249,6 +268,18 @@ const ProjectDetail = () => {
             {escrowSuccess && (
               <div className="mb-6 bg-blue-100 border border-blue-400 text-blue-800 px-4 py-3 rounded-lg">
                 <p className="font-semibold">Escrow creado correctamente. Fondos en custodia hasta liberación.</p>
+              </div>
+            )}
+
+            {actionMessage && (
+              <div className="mb-6 bg-emerald-100 border border-emerald-400 text-emerald-800 px-4 py-3 rounded-lg">
+                <p className="font-semibold">{actionMessage}</p>
+              </div>
+            )}
+
+            {actionError && (
+              <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                <p className="font-semibold">{actionError}</p>
               </div>
             )}
 

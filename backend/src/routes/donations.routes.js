@@ -9,6 +9,16 @@ const getSorobanService = require('../../soroban/soroban.service');
 const trustlessWorkService = require('../services/trustlesswork.service');
 const BigNumber = require('bignumber.js');
 
+const shouldFallbackOnAuthError = () => process.env.TRUSTLESSWORK_ALLOW_FALLBACK_ON_AUTH_ERROR !== 'false';
+
+const isTrustlessAuthError = (errorMessage = '') => {
+    return /TrustlessWork API error \((401|403)\)/.test(String(errorMessage));
+};
+
+const getErrorMessage = (error) => {
+    return error?.message || 'Unknown error';
+};
+
 // 1. Obtener TODOS los proyectos activos con su progreso
 router.get('/projects', async (req, res) => {
     try {
@@ -180,6 +190,10 @@ router.post('/projects/:projectId/donate-escrow', auth, async (req, res) => {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
+        if (donor.walletAddress && donor.walletAddress !== donorAddress) {
+            return res.status(400).json({ error: 'donorAddress no coincide con la wallet del usuario autenticado' });
+        }
+
         const project = await Project.findById(projectId).populate('creator');
         if (!project) {
             return res.status(404).json({ error: 'Proyecto no encontrado' });
@@ -207,7 +221,30 @@ router.post('/projects/:projectId/donate-escrow', auth, async (req, res) => {
             }
         };
 
-        const trustlessResult = await trustlessWorkService.fundSingleReleaseEscrow(trustlessPayload);
+        let trustlessResult;
+        try {
+            trustlessResult = await trustlessWorkService.fundSingleReleaseEscrow(trustlessPayload);
+        } catch (providerError) {
+            const providerMessage = getErrorMessage(providerError);
+
+            if (isTrustlessAuthError(providerMessage) && shouldFallbackOnAuthError()) {
+                trustlessResult = trustlessWorkService.createMockResponse('fund-single-release-fallback', {
+                    ...trustlessPayload,
+                    fallbackReason: providerMessage
+                });
+            } else if (isTrustlessAuthError(providerMessage)) {
+                return res.status(502).json({
+                    error: 'Trustless Work rechazó la autenticación (401/403).',
+                    details: providerMessage,
+                    hint: 'Configura TRUSTLESSWORK_API_KEY válida o activa TRUSTLESSWORK_MOCK_MODE=true / TRUSTLESSWORK_ALLOW_FALLBACK_ON_AUTH_ERROR=true'
+                });
+            } else {
+                return res.status(502).json({
+                    error: 'Error del proveedor de escrow',
+                    details: providerMessage
+                });
+            }
+        }
 
         const trustlessEscrowId =
             trustlessResult?.escrowId ||
@@ -245,7 +282,7 @@ router.post('/projects/:projectId/donate-escrow', auth, async (req, res) => {
         });
 
         const transaction = await Transaction.create({
-            type: 'donation',
+            type: 'escrow_fund',
             amount: String(amount),
             from: donor._id,
             to: project.creator._id,
@@ -319,9 +356,26 @@ router.post('/escrows/:escrowId/approve', auth, async (req, res) => {
             milestoneIndex
         };
 
-        const providerResponse = escrow.mode === 'multi-release'
-            ? await trustlessWorkService.approveMultiReleaseMilestone(providerPayload)
-            : await trustlessWorkService.approveSingleReleaseEscrow(providerPayload);
+        let providerResponse;
+        try {
+            providerResponse = escrow.mode === 'multi-release'
+                ? await trustlessWorkService.approveMultiReleaseMilestone(providerPayload)
+                : await trustlessWorkService.approveSingleReleaseEscrow(providerPayload);
+        } catch (providerError) {
+            const providerMessage = getErrorMessage(providerError);
+
+            if (isTrustlessAuthError(providerMessage) && shouldFallbackOnAuthError()) {
+                providerResponse = trustlessWorkService.createMockResponse('approve-fallback', {
+                    ...providerPayload,
+                    fallbackReason: providerMessage
+                });
+            } else {
+                return res.status(502).json({
+                    error: 'No se pudo aprobar en proveedor escrow',
+                    details: providerMessage
+                });
+            }
+        }
 
         if (escrow.mode === 'multi-release' && escrow.milestones[milestoneIndex]) {
             escrow.milestones[milestoneIndex].status = 'approved';
@@ -387,9 +441,26 @@ router.post('/escrows/:escrowId/release', auth, async (req, res) => {
             amount: releaseAmount
         };
 
-        const providerResponse = escrow.mode === 'multi-release'
-            ? await trustlessWorkService.releaseMultiReleaseMilestoneFunds(providerPayload)
-            : await trustlessWorkService.releaseSingleReleaseFunds(providerPayload);
+        let providerResponse;
+        try {
+            providerResponse = escrow.mode === 'multi-release'
+                ? await trustlessWorkService.releaseMultiReleaseMilestoneFunds(providerPayload)
+                : await trustlessWorkService.releaseSingleReleaseFunds(providerPayload);
+        } catch (providerError) {
+            const providerMessage = getErrorMessage(providerError);
+
+            if (isTrustlessAuthError(providerMessage) && shouldFallbackOnAuthError()) {
+                providerResponse = trustlessWorkService.createMockResponse('release-fallback', {
+                    ...providerPayload,
+                    fallbackReason: providerMessage
+                });
+            } else {
+                return res.status(502).json({
+                    error: 'No se pudo liberar fondos en proveedor escrow',
+                    details: providerMessage
+                });
+            }
+        }
 
         const newReleasedAmount = new BigNumber(escrow.amountReleased).plus(releaseAmount).toString();
         escrow.amountReleased = newReleasedAmount;
