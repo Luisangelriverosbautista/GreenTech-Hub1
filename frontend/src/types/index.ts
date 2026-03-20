@@ -36,7 +36,7 @@ export interface Project {
   imageUrl?: string;
   walletAddress?: string;
   funded?: boolean;
-  status?: 'pending' | 'active' | 'funded' | 'completed';
+  status?: 'pending' | 'active' | 'funded' | 'completed' | 'cancelled';
   raisedAmount?: number;
   transactions?: Transaction[];
   progress?: number;
