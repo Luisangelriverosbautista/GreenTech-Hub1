@@ -12,6 +12,7 @@ const ContentHub = () => {
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [videoForm, setVideoForm] = useState<CreateVideoPayload>({
     title: '',
@@ -67,6 +68,7 @@ const ContentHub = () => {
 
     try {
       setError(null);
+      setSuccess(null);
       const created = await contentService.createVideo(videoForm);
       setVideos((prev) => [created, ...prev]);
       setVideoForm({
@@ -76,7 +78,9 @@ const ContentHub = () => {
         tags: [],
         status: 'published',
       });
+      setSuccess('Video publicado correctamente.');
     } catch (err: any) {
+      setSuccess(null);
       setError(err?.response?.data?.error || 'No se pudo crear el video.');
     }
   };
@@ -87,7 +91,14 @@ const ContentHub = () => {
 
     try {
       setError(null);
-      const created = await contentService.createBlog(blogForm);
+      const submitEvent = e.nativeEvent as SubmitEvent;
+      const submitter = submitEvent.submitter as HTMLButtonElement | null;
+      const submitStatus = submitter?.value === 'published' ? 'published' : 'draft';
+
+      const created = await contentService.createBlog({
+        ...blogForm,
+        status: submitStatus,
+      });
       if (created.status === 'published') {
         setBlogs((prev) => [created, ...prev]);
       }
@@ -99,7 +110,13 @@ const ContentHub = () => {
         tags: [],
         status: 'draft',
       });
+      setSuccess(
+        created.status === 'published'
+          ? 'Blog publicado correctamente.'
+          : 'Borrador guardado correctamente.'
+      );
     } catch (err: any) {
+      setSuccess(null);
       setError(err?.response?.data?.error || 'No se pudo crear el blog.');
     }
   };
@@ -129,6 +146,7 @@ const ContentHub = () => {
       </div>
 
       {error && <div className="bg-red-50 text-red-700 p-3 rounded-md">{error}</div>}
+      {success && <div className="bg-emerald-50 text-emerald-700 p-3 rounded-md">{success}</div>}
 
       {canPublish && activeTab === 'videos' && (
         <form onSubmit={handleCreateVideo} className="bg-white p-6 rounded-lg shadow space-y-4">
@@ -202,15 +220,15 @@ const ContentHub = () => {
           />
           <div className="flex gap-3">
             <button
-              type="button"
-              onClick={() => setBlogForm((prev) => ({ ...prev, status: 'draft' }))}
+              type="submit"
+              value="draft"
               className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md"
             >
               Guardar como borrador
             </button>
             <button
               type="submit"
-              onClick={() => setBlogForm((prev) => ({ ...prev, status: 'published' }))}
+              value="published"
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
             >
               Publicar Blog
