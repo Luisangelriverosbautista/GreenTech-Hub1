@@ -105,9 +105,16 @@ const ProjectDetail = () => {
     );
   }
 
-  const progress = parseFloat(String(project.currentAmount || '0')) / parseFloat(String(project.targetAmount || '1')) * 100;
+  const currentAmount = Number.parseFloat(String(project.currentAmount ?? 0)) || 0;
+  const targetAmount = Number.parseFloat(String(project.targetAmount ?? 0)) || 0;
+  const progress = targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
+  const isFunded = targetAmount > 0 && currentAmount >= targetAmount;
+  const remainingAmount = Math.max(targetAmount - currentAmount, 0);
+  const effectiveStatus = project.status === 'completed'
+    ? 'completed'
+    : (project.status === 'cancelled' ? 'cancelled' : (isFunded ? 'funded' : (project.status || 'active')));
   const categoryBadge = getCategoryBadge(project.category);
-  const statusBadge = getStatusBadge(project.status || 'active');
+  const statusBadge = getStatusBadge(effectiveStatus);
   const creatorName = typeof project.creator === 'object' && project.creator && 'username' in project.creator 
     ? (project.creator as any).username 
     : 'Anónimo';
@@ -206,13 +213,13 @@ const ProjectDetail = () => {
                     <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
                       <p className="text-gray-600 text-sm font-medium">Recaudado</p>
                       <p className="text-2xl font-bold text-green-600">
-                        {project.currentAmount || '0'} XLM
+                        {currentAmount.toFixed(2)} XLM
                       </p>
                     </div>
                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
                       <p className="text-gray-600 text-sm font-medium">Meta</p>
                       <p className="text-2xl font-bold text-blue-600">
-                        {project.targetAmount || '0'} XLM
+                        {targetAmount.toFixed(2)} XLM
                       </p>
                     </div>
                     <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
@@ -230,6 +237,9 @@ const ProjectDetail = () => {
                       style={{ width: `${Math.min(progress, 100)}%` }}
                     />
                   </div>
+                  <p className="mt-3 text-sm text-gray-600">
+                    {isFunded ? 'Meta completada' : `Faltan ${remainingAmount.toFixed(2)} XLM para alcanzar la meta`}
+                  </p>
                 </div>
 
                 {/* Description */}
@@ -321,7 +331,7 @@ const ProjectDetail = () => {
                 </div>
 
                 {/* Donation Card */}
-                {user?.role === 'donor' && project.status === 'active' && (
+                {user?.role === 'donor' && effectiveStatus === 'active' && (
                   <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
                     <h3 className="text-xl font-bold text-gray-900 mb-4">
                       Realizar Donación
@@ -347,7 +357,7 @@ const ProjectDetail = () => {
                       />
                       <button
                         onClick={handleDonate}
-                        disabled={!donationAmount || isDonating}
+                        disabled={!donationAmount || isDonating || isFunded}
                         className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isDonating ? 'Procesando...' : 'Donar'}
@@ -380,7 +390,7 @@ const ProjectDetail = () => {
                     </div>
                     <div className="border-t pt-3">
                       <p className="text-xs font-semibold text-gray-600 uppercase">Estado</p>
-                      <p className="text-sm text-gray-900 capitalize">{project.status || 'activo'}</p>
+                      <p className="text-sm text-gray-900">{statusBadge.label}</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-gray-600 uppercase">Categoría</p>

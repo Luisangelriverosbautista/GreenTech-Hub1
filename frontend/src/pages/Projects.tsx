@@ -71,10 +71,13 @@ const Projects: React.FC = () => {
 
   // Tarjeta mejorada del proyecto
   const ProjectCard = ({ project }: { project: any }) => {
-    const progress = parseFloat(project.progress) || 0;
-    const remaining = project.remaining ? 
-      parseFloat(project.remaining).toFixed(2) : 
-      (parseFloat(project.targetAmount) - parseFloat(project.currentAmount || 0)).toFixed(2);
+    const currentAmount = Number.parseFloat(String(project.currentAmount ?? 0)) || 0;
+    const targetAmount = Number.parseFloat(String(project.targetAmount ?? 0)) || 0;
+    const progress = targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
+    const remainingValue = Math.max(targetAmount - currentAmount, 0);
+    const remaining = remainingValue.toFixed(2);
+    const isFunded = targetAmount > 0 && currentAmount >= targetAmount;
+    const isDonationDisabled = isDonating || project.status !== 'active' || isFunded;
 
     return (
       <div className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full flex flex-col">
@@ -120,7 +123,7 @@ const Projects: React.FC = () => {
           <div className="mb-4">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-semibold text-gray-700">
-                {parseFloat(project.currentAmount || 0).toFixed(2)} / {project.targetAmount} XLM
+                {currentAmount.toFixed(2)} / {targetAmount.toFixed(2)} XLM
               </span>
               <span className="text-sm font-bold text-green-600">
                 {Math.min(progress, 100).toFixed(0)}%
@@ -133,7 +136,7 @@ const Projects: React.FC = () => {
               ></div>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Faltan {remaining} XLM
+              {isFunded ? 'Meta completada' : `Faltan ${remaining} XLM`}
             </p>
           </div>
 
@@ -156,10 +159,10 @@ const Projects: React.FC = () => {
           <div className="flex gap-2">
             <button
               onClick={() => handleDonate(project)}
-              disabled={isDonating || project.status !== 'active'}
+              disabled={isDonationDisabled}
               className="flex-1 bg-green-600 text-white py-2 px-3 rounded-md hover:bg-green-700 transition-colors font-medium disabled:bg-gray-400 text-sm"
             >
-              💚 Donar
+              {isFunded ? '✅ Completado' : '💚 Donar'}
             </button>
             <button
               onClick={() => handleViewDetails(project._id || project.id)}
@@ -170,7 +173,7 @@ const Projects: React.FC = () => {
           </div>
 
           {/* Estatus */}
-          {project.status === 'funded' && (
+          {(project.status === 'funded' || isFunded) && (
             <div className="mt-2 bg-green-50 border border-green-200 rounded px-2 py-1 text-center">
               <p className="text-xs font-bold text-green-700">✅ Meta Alcanzada</p>
             </div>
