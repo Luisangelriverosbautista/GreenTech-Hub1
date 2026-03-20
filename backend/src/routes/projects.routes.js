@@ -8,7 +8,22 @@ const User = require('../models/User');
 // Obtener todos los proyectos
 router.get('/', async (req, res) => {
     try {
-        const projects = await Project.find({ status: 'active' }).populate('creator', 'username email walletAddress');
+        const { status } = req.query;
+
+        // Default behavior: show all visible projects (hide only cancelled).
+        let filter = {
+            status: { $not: /^cancelled$/i }
+        };
+
+        if (typeof status === 'string') {
+            if (status.toLowerCase() === 'all') {
+                filter = {};
+            } else {
+                filter = { status: { $regex: new RegExp(`^${status}$`, 'i') } };
+            }
+        }
+
+        const projects = await Project.find(filter).populate('creator', 'username email walletAddress');
         res.json(projects);
     } catch (error) {
         res.status(500).json({ error: error.message });

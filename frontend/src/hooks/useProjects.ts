@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { Project, NewProject } from "../types";
 import { projectService } from "../services/project.service";
 
-export function useProjects() {
+export function useProjects(status?: string) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -11,7 +11,7 @@ export function useProjects() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await projectService.getProjects();
+      const data = await projectService.getProjects(status);
       setProjects(data || []);
     } catch (err) {
       console.error('Error loading projects:', err);
@@ -21,7 +21,7 @@ export function useProjects() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [status]);
 
   const createProject = async (project: NewProject) => {
     try {

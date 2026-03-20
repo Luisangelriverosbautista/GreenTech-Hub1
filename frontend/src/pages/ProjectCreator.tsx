@@ -72,7 +72,7 @@ const ProjectCreator: React.FC = () => {
         description: formData.description.trim(),
         targetAmount: formData.targetAmount,
         category: formData.category,
-        imageUrl: formData.imageUrl || 'https://via.placeholder.com/400x300?text=Proyecto',
+        imageUrl: formData.imageUrl || '',
         environmentalImpact: {
           metric: formData.environmentalImpact.metric || 'impacto',
           value: formData.environmentalImpact.value || '0'

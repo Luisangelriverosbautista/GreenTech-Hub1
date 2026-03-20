@@ -2,9 +2,11 @@ import api from './api';
 import type { Project } from '../types';
 
 class ProjectService {
-  async getProjects(): Promise<Project[]> {
+  async getProjects(status?: string): Promise<Project[]> {
     try {
-      const response = await api.get<Project[]>('/projects');
+      const response = await api.get<Project[]>('/projects', {
+        params: status ? { status } : undefined,
+      });
       console.log('Projects fetched:', response.data);
       return response.data;
     } catch (error) {

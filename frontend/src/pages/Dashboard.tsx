@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useProjects } from '../hooks/useProjects';
 import { useDonationsByRole } from '../hooks/useDonationsByRole';
@@ -11,6 +10,8 @@ const DonorDashboard = () => {
   const { projects, isLoading: projectsLoading, error: projectsError } = useProjects();
   const { made, totalMade, isLoading: donationsLoading, error: donationsError } = useDonationsByRole();
   const { balance, isLoading: balanceLoading } = useWalletBalance();
+
+  const getProjectId = (project: any): string => project?._id || project?.id || '';
 
   return (
     <div className="space-y-8">
@@ -66,8 +67,8 @@ const DonorDashboard = () => {
           </div>
         ) : projects && projects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.slice(0, 3).map((project) => (
-              <ProjectCard key={project.id} project={project} compact />
+            {projects.slice(0, 3).map((project, index) => (
+              <ProjectCard key={getProjectId(project) || `project-${index}`} project={project} compact />
             ))}
           </div>
         ) : (
@@ -103,9 +104,14 @@ const DonorDashboard = () => {
 
 const CreatorDashboard = () => {
   const { user } = useAuth();
-  const { projects, isLoading: projectsLoading, error: projectsError } = useProjects();
+  const { projects, isLoading: projectsLoading, error: projectsError } = useProjects('all');
   const { received, totalReceived, isLoading: donationsLoading, error: donationsError } = useDonationsByRole();
-  const myProjects = user ? projects.filter(p => p.creatorId === user.id) : [];
+  const getProjectId = (project: any): string => project?._id || project?.id || '';
+  const currentUserId = (user as any)?._id || user?.id;
+  const myProjects = user ? projects.filter((p: any) => {
+    const creatorId = p.creatorId || p.creator?._id || p.creator?.id;
+    return Boolean(currentUserId && creatorId && creatorId === currentUserId);
+  }) : [];
 
   return (
     <div className="space-y-8">
@@ -185,8 +191,8 @@ const CreatorDashboard = () => {
           </div>
         ) : myProjects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {myProjects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+            {myProjects.map((project, index) => (
+              <ProjectCard key={getProjectId(project) || `my-project-${index}`} project={project} />
             ))}
           </div>
         ) : (
@@ -222,12 +228,6 @@ const CreatorDashboard = () => {
 
 function Dashboard() {
   const { user } = useAuth();
-  const { refreshProjects } = useProjects();
-
-  useEffect(() => {
-    // Prefetch projects data
-    refreshProjects();
-  }, [refreshProjects]);
 
   if (!user) return null;
 

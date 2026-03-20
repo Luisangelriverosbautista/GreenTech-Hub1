@@ -4,6 +4,8 @@ import { useProjects } from '../hooks/useProjects';
 import { useDonations } from '../hooks/useDonations';
 import { DonateModal } from '../components/DonateModal';
 
+const DEFAULT_PROJECT_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23d1fae5'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23065f46' font-family='Arial' font-size='22'%3EProyecto%3C/text%3E%3C/svg%3E";
+
 const Projects: React.FC = () => {
   const navigate = useNavigate();
   const { projects, isLoading: loading, error, refreshProjects } = useProjects();
@@ -79,9 +81,14 @@ const Projects: React.FC = () => {
         {/* Imagen */}
         <div className="h-48 bg-gray-200 overflow-hidden">
           <img 
-            src={project.imageUrl || 'https://via.placeholder.com/400x300?text=Proyecto'} 
+            src={project.imageUrl || DEFAULT_PROJECT_IMAGE}
             alt={project.title}
             className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+            onError={(e) => {
+              if (e.currentTarget.src !== DEFAULT_PROJECT_IMAGE) {
+                e.currentTarget.src = DEFAULT_PROJECT_IMAGE;
+              }
+            }}
             onClick={() => handleViewDetails(project._id || project.id)}
           />
         </div>

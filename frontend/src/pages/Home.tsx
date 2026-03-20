@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useProjects } from '../hooks/useProjects';
+
+const DEFAULT_PROJECT_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23d1fae5'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23065f46' font-family='Arial' font-size='22'%3EProyecto%3C/text%3E%3C/svg%3E";
 import { useState, useEffect } from 'react';
 
 function Home() {
@@ -134,9 +136,14 @@ function Home() {
                       {/* Image */}
                       <div className="h-48 bg-gray-200 overflow-hidden">
                         <img 
-                          src={project.imageUrl || 'https://via.placeholder.com/400x300?text=Proyecto'} 
+                          src={project.imageUrl || DEFAULT_PROJECT_IMAGE}
                           alt={project.title}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            if (e.currentTarget.src !== DEFAULT_PROJECT_IMAGE) {
+                              e.currentTarget.src = DEFAULT_PROJECT_IMAGE;
+                            }
+                          }}
                         />
                       </div>
 
