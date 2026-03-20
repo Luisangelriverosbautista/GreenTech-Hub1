@@ -3,8 +3,10 @@ const router = express.Router();
 const auth = require('./../middleware/auth');
 const Project = require('../models/Project');
 const Transaction = require('../models/Transaction');
+const Escrow = require('../models/Escrow');
 const User = require('../models/User');
 const getSorobanService = require('../../soroban/soroban.service');
+const trustlessWorkService = require('../services/trustlesswork.service');
 const BigNumber = require('bignumber.js');
 
 // 1. Obtener TODOS los proyectos activos con su progreso
@@ -155,6 +157,293 @@ router.post('/projects/:projectId/donate', auth, async (req, res) => {
     } catch (error) {
         console.error('[Donation] Unexpected error:', error);
         res.status(500).json({ error: error.message || 'Error inesperado' });
+    }
+});
+
+// 3.1 Crear/fondear escrow (FASE 1: single-release)
+router.post('/projects/:projectId/donate-escrow', auth, async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { amount, donorAddress, metadata = {} } = req.body;
+
+        if (!amount || !donorAddress) {
+            return res.status(400).json({ error: 'amount y donorAddress son requeridos' });
+        }
+
+        const amountNumber = Number.parseFloat(String(amount));
+        if (Number.isNaN(amountNumber) || amountNumber <= 0) {
+            return res.status(400).json({ error: 'amount debe ser mayor a 0' });
+        }
+
+        const donor = await User.findById(req.user.userId);
+        if (!donor) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        const project = await Project.findById(projectId).populate('creator');
+        if (!project) {
+            return res.status(404).json({ error: 'Proyecto no encontrado' });
+        }
+
+        if (project.status !== 'active') {
+            return res.status(400).json({ error: 'El proyecto no está activo' });
+        }
+
+        if (!project.creator || !project.creator.walletAddress) {
+            return res.status(400).json({ error: 'El creador del proyecto no tiene walletAddress' });
+        }
+
+        const trustlessPayload = {
+            amount: String(amount),
+            donorAddress,
+            recipientAddress: project.creator.walletAddress,
+            title: `Donacion escrow para ${project.title}`,
+            description: metadata.description || `Escrow de donacion para el proyecto ${project.title}`,
+            metadata: {
+                projectId: String(project._id),
+                donorId: String(donor._id),
+                creatorId: String(project.creator._id),
+                ...metadata
+            }
+        };
+
+        const trustlessResult = await trustlessWorkService.fundSingleReleaseEscrow(trustlessPayload);
+
+        const trustlessEscrowId =
+            trustlessResult?.escrowId ||
+            trustlessResult?.id ||
+            trustlessResult?.escrow_id ||
+            trustlessResult?.data?.escrowId ||
+            trustlessResult?.data?.id;
+
+        if (!trustlessEscrowId) {
+            return res.status(502).json({
+                error: 'Trustless Work no devolvió un escrowId utilizable',
+                trustlessResult
+            });
+        }
+
+        const contractId =
+            trustlessResult?.contractId ||
+            trustlessResult?.contract_id ||
+            trustlessResult?.data?.contractId ||
+            null;
+
+        const escrow = await Escrow.create({
+            project: project._id,
+            donor: donor._id,
+            creator: project.creator._id,
+            mode: 'single-release',
+            trustlessEscrowId,
+            contractId,
+            amountTotal: String(amount),
+            amountReleased: '0',
+            status: 'funded',
+            metadata,
+            trustlessResponse: trustlessResult,
+            lastSyncedAt: new Date()
+        });
+
+        const transaction = await Transaction.create({
+            type: 'donation',
+            amount: String(amount),
+            from: donor._id,
+            to: project.creator._id,
+            project: project._id,
+            status: 'pending',
+            txHash: contractId || trustlessEscrowId,
+            sorobanResponse: {
+                provider: 'trustlesswork',
+                escrowId: trustlessEscrowId,
+                mode: 'single-release',
+                state: 'funded'
+            }
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Escrow creado/fondeado exitosamente',
+            escrow,
+            transaction,
+            providerResponse: trustlessResult
+        });
+    } catch (error) {
+        console.error('[Escrow Donation] Error:', error.message);
+        res.status(500).json({ error: error.message || 'Error al crear escrow' });
+    }
+});
+
+// 3.2 Obtener escrows de un proyecto (FASE 1)
+router.get('/projects/:projectId/escrows', auth, async (req, res) => {
+    try {
+        const { projectId } = req.params;
+
+        const escrows = await Escrow.find({ project: projectId })
+            .populate('donor', 'name email walletAddress')
+            .populate('creator', 'name email walletAddress')
+            .sort({ createdAt: -1 });
+
+        res.json({
+            count: escrows.length,
+            escrows
+        });
+    } catch (error) {
+        console.error('[Project Escrows] Error:', error.message);
+        res.status(500).json({ error: error.message || 'Error al obtener escrows' });
+    }
+});
+
+// 3.3 Aprobar escrow/milestone (FASE 2)
+router.post('/escrows/:escrowId/approve', auth, async (req, res) => {
+    try {
+        const { escrowId } = req.params;
+        const { milestoneIndex = 0 } = req.body;
+
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        const escrow = await Escrow.findById(escrowId);
+        if (!escrow) {
+            return res.status(404).json({ error: 'Escrow no encontrado' });
+        }
+
+        if (String(escrow.donor) !== String(user._id)) {
+            return res.status(403).json({ error: 'Solo el donante puede aprobar el escrow' });
+        }
+
+        const providerPayload = {
+            escrowId: escrow.trustlessEscrowId,
+            contractId: escrow.contractId,
+            milestoneIndex
+        };
+
+        const providerResponse = escrow.mode === 'multi-release'
+            ? await trustlessWorkService.approveMultiReleaseMilestone(providerPayload)
+            : await trustlessWorkService.approveSingleReleaseEscrow(providerPayload);
+
+        if (escrow.mode === 'multi-release' && escrow.milestones[milestoneIndex]) {
+            escrow.milestones[milestoneIndex].status = 'approved';
+            escrow.milestones[milestoneIndex].approvedAt = new Date();
+        }
+
+        escrow.status = 'approved';
+        escrow.lastSyncedAt = new Date();
+        escrow.trustlessResponse = {
+            ...escrow.trustlessResponse,
+            lastApproveResponse: providerResponse
+        };
+        await escrow.save();
+
+        res.json({
+            success: true,
+            message: 'Escrow aprobado correctamente',
+            escrow,
+            providerResponse
+        });
+    } catch (error) {
+        console.error('[Escrow Approve] Error:', error.message);
+        res.status(500).json({ error: error.message || 'Error al aprobar escrow' });
+    }
+});
+
+// 3.4 Liberar fondos de escrow (FASE 2)
+router.post('/escrows/:escrowId/release', auth, async (req, res) => {
+    try {
+        const { escrowId } = req.params;
+        const { milestoneIndex = 0, amount } = req.body;
+
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        const escrow = await Escrow.findById(escrowId);
+        if (!escrow) {
+            return res.status(404).json({ error: 'Escrow no encontrado' });
+        }
+
+        const isAllowed = String(escrow.donor) === String(user._id) || String(escrow.creator) === String(user._id);
+        if (!isAllowed) {
+            return res.status(403).json({ error: 'No autorizado para liberar fondos de este escrow' });
+        }
+
+        const project = await Project.findById(escrow.project);
+        if (!project) {
+            return res.status(404).json({ error: 'Proyecto asociado no encontrado' });
+        }
+
+        const releaseAmount = amount
+            ? String(amount)
+            : (escrow.mode === 'multi-release' && escrow.milestones[milestoneIndex]
+                ? String(escrow.milestones[milestoneIndex].amount)
+                : String(escrow.amountTotal));
+
+        const providerPayload = {
+            escrowId: escrow.trustlessEscrowId,
+            contractId: escrow.contractId,
+            milestoneIndex,
+            amount: releaseAmount
+        };
+
+        const providerResponse = escrow.mode === 'multi-release'
+            ? await trustlessWorkService.releaseMultiReleaseMilestoneFunds(providerPayload)
+            : await trustlessWorkService.releaseSingleReleaseFunds(providerPayload);
+
+        const newReleasedAmount = new BigNumber(escrow.amountReleased).plus(releaseAmount).toString();
+        escrow.amountReleased = newReleasedAmount;
+        escrow.lastSyncedAt = new Date();
+
+        if (escrow.mode === 'multi-release' && escrow.milestones[milestoneIndex]) {
+            escrow.milestones[milestoneIndex].status = 'released';
+            escrow.milestones[milestoneIndex].releasedAt = new Date();
+            escrow.status = new BigNumber(newReleasedAmount).isGreaterThanOrEqualTo(escrow.amountTotal)
+                ? 'released'
+                : 'partially-released';
+        } else {
+            escrow.status = 'released';
+        }
+
+        escrow.trustlessResponse = {
+            ...escrow.trustlessResponse,
+            lastReleaseResponse: providerResponse
+        };
+        await escrow.save();
+
+        project.currentAmount = new BigNumber(project.currentAmount || '0').plus(releaseAmount).toString();
+        if (new BigNumber(project.currentAmount).isGreaterThanOrEqualTo(project.targetAmount)) {
+            project.status = 'funded';
+        }
+        await project.save();
+
+        await Transaction.create({
+            type: 'escrow_release',
+            amount: releaseAmount,
+            from: escrow.donor,
+            to: escrow.creator,
+            project: escrow.project,
+            status: 'completed',
+            txHash: escrow.contractId || escrow.trustlessEscrowId,
+            sorobanResponse: {
+                provider: 'trustlesswork',
+                escrowId: escrow.trustlessEscrowId,
+                action: 'release',
+                providerResponse
+            }
+        });
+
+        res.json({
+            success: true,
+            message: 'Fondos liberados correctamente',
+            escrow,
+            projectCurrentAmount: project.currentAmount,
+            projectStatus: project.status,
+            providerResponse
+        });
+    } catch (error) {
+        console.error('[Escrow Release] Error:', error.message);
+        res.status(500).json({ error: error.message || 'Error al liberar fondos' });
     }
 });
 

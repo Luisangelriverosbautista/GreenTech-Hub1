@@ -53,6 +53,16 @@ const ProjectCreator: React.FC = () => {
     }));
   };
 
+  const handleImpactValueChange = (rawValue: string) => {
+    const normalized = rawValue.replace(',', '.');
+    if (normalized === '' || /^\d*\.?\d*$/.test(normalized)) {
+      setFormData(prev => ({
+        ...prev,
+        environmentalImpact: { ...prev.environmentalImpact, value: normalized }
+      }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
@@ -75,7 +85,7 @@ const ProjectCreator: React.FC = () => {
         imageUrl: formData.imageUrl || '',
         environmentalImpact: {
           metric: formData.environmentalImpact.metric || 'impacto',
-          value: formData.environmentalImpact.value || '0'
+          value: Number.parseFloat(formData.environmentalImpact.value || '0') || 0
         },
         milestones: formData.milestones.length > 0 ? formData.milestones : [
           {
@@ -238,12 +248,10 @@ const ProjectCreator: React.FC = () => {
                 type="text"
                 id="value"
                 value={formData.environmentalImpact.value}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  environmentalImpact: { ...prev.environmentalImpact, value: e.target.value }
-                }))}
+                onChange={(e) => handleImpactValueChange(e.target.value)}
+                inputMode="decimal"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Ej: 500 toneladas"
+                placeholder="Ej: 500"
               />
             </div>
           </div>

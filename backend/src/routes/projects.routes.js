@@ -34,6 +34,19 @@ router.get('/', async (req, res) => {
 router.post('/', auth, async (req, res) => {
     try {
         const { title, description, targetAmount, category, imageUrl, milestones, environmentalImpact } = req.body;
+        let normalizedEnvironmentalImpact = environmentalImpact;
+
+        if (environmentalImpact && typeof environmentalImpact === 'object') {
+            const parsedValue = Number.parseFloat(String(environmentalImpact.value ?? '0'));
+            if (Number.isNaN(parsedValue)) {
+                return res.status(400).json({ error: 'environmentalImpact.value debe ser numérico' });
+            }
+
+            normalizedEnvironmentalImpact = {
+                ...environmentalImpact,
+                value: parsedValue
+            };
+        }
         
         // Obtener usuario desde la BD para tener su wallet actualizada
         const user = await User.findById(req.user.userId);
@@ -54,7 +67,7 @@ router.post('/', auth, async (req, res) => {
             category,
             imageUrl,
             milestones,
-            environmentalImpact,
+            environmentalImpact: normalizedEnvironmentalImpact,
             creator: user._id,
             walletAddress,
             status: 'active'

@@ -5,6 +5,8 @@ import { useDonations } from '../hooks/useDonations';
 import { ShareProject } from '../components/ShareProject';
 import type { Project } from '../types';
 import projectService from '../services/project.service';
+import { escrowService, type Escrow } from '../services/escrow.service';
+import { getAddress } from '@stellar/freighter-api';
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +18,11 @@ const ProjectDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [donationAmount, setDonationAmount] = useState('');
   const [donationSuccess, setDonationSuccess] = useState(false);
+  const [escrowSuccess, setEscrowSuccess] = useState(false);
+  const [isEscrowDonating, setIsEscrowDonating] = useState(false);
+  const [projectEscrows, setProjectEscrows] = useState<Escrow[]>([]);
+  const [isEscrowsLoading, setIsEscrowsLoading] = useState(false);
+  const [escrowActionInProgressId, setEscrowActionInProgressId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -36,6 +43,18 @@ const ProjectDetail = () => {
     }
   };
 
+  const loadEscrows = async (projectId: string) => {
+    try {
+      setIsEscrowsLoading(true);
+      const response = await escrowService.getProjectEscrows(projectId);
+      setProjectEscrows((response.escrows || []) as Escrow[]);
+    } catch (escrowLoadError) {
+      console.error('Error al cargar escrows:', escrowLoadError);
+    } finally {
+      setIsEscrowsLoading(false);
+    }
+  };
+
   const handleDonate = async () => {
     if (!user || !project || !donationAmount || !project.walletAddress) return;
 
@@ -53,6 +72,89 @@ const ProjectDetail = () => {
       console.error('Error en la donación:', error);
       setError('Error al procesar la donación');
     }
+  };
+
+  const handleDonateWithEscrow = async () => {
+    if (!user || !project || !donationAmount) return;
+
+    try {
+      setIsEscrowDonating(true);
+
+      const walletResult = await getAddress();
+      if (walletResult.error || !walletResult.address) {
+        throw new Error('No se pudo obtener la dirección de Freighter');
+      }
+
+      await escrowService.donateWithEscrow(project._id || project.id || '', {
+        amount: donationAmount.toString(),
+        donorAddress: walletResult.address,
+        metadata: {
+          source: 'project-detail',
+          projectTitle: project.title
+        }
+      });
+
+      setEscrowSuccess(true);
+      setDonationAmount('');
+      setTimeout(() => setEscrowSuccess(false), 5000);
+      await loadProject(id!);
+      await loadEscrows(id!);
+    } catch (escrowError: unknown) {
+      console.error('Error en la donación con escrow:', escrowError);
+      setError('Error al procesar la donación con escrow');
+    } finally {
+      setIsEscrowDonating(false);
+    }
+  };
+
+  const handleApproveEscrow = async (escrowId: string) => {
+    if (!id) return;
+
+    try {
+      setEscrowActionInProgressId(escrowId);
+      await escrowService.approveEscrow(escrowId, 0);
+      await loadEscrows(id);
+    } catch (approveError) {
+      console.error('Error al aprobar escrow:', approveError);
+      setError('No se pudo aprobar el escrow');
+    } finally {
+      setEscrowActionInProgressId(null);
+    }
+  };
+
+  const handleReleaseEscrow = async (escrowId: string) => {
+    if (!id) return;
+
+    try {
+      setEscrowActionInProgressId(escrowId);
+      await escrowService.releaseEscrowFunds(escrowId, 0);
+      await Promise.all([loadEscrows(id), loadProject(id)]);
+    } catch (releaseError) {
+      console.error('Error al liberar escrow:', releaseError);
+      setError('No se pudo liberar el escrow');
+    } finally {
+      setEscrowActionInProgressId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (id && user) {
+      loadEscrows(id);
+    }
+  }, [id, user]);
+
+  const getEscrowStatusLabel = (status: Escrow['status']) => {
+    const labels: Record<Escrow['status'], string> = {
+      draft: 'Borrador',
+      funded: 'Fondeado',
+      approved: 'Aprobado',
+      'partially-released': 'Parcialmente liberado',
+      released: 'Liberado',
+      disputed: 'En disputa',
+      resolved: 'Resuelto',
+      failed: 'Fallido'
+    };
+    return labels[status] || status;
   };
 
   const getCategoryBadge = (category: string) => {
@@ -141,6 +243,12 @@ const ProjectDetail = () => {
             {donationSuccess && (
               <div className="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
                 <p className="font-semibold">¡Donación realizada exitosamente!</p>
+              </div>
+            )}
+
+            {escrowSuccess && (
+              <div className="mb-6 bg-blue-100 border border-blue-400 text-blue-800 px-4 py-3 rounded-lg">
+                <p className="font-semibold">Escrow creado correctamente. Fondos en custodia hasta liberación.</p>
               </div>
             )}
 
@@ -362,6 +470,13 @@ const ProjectDetail = () => {
                       >
                         {isDonating ? 'Procesando...' : 'Donar'}
                       </button>
+                      <button
+                        onClick={handleDonateWithEscrow}
+                        disabled={!donationAmount || isEscrowDonating || isFunded}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isEscrowDonating ? 'Creando escrow...' : 'Donar con Escrow'}
+                      </button>
                     </div>
 
                     <div className="bg-gray-50 rounded-lg p-4">
@@ -411,6 +526,70 @@ const ProjectDetail = () => {
                       </p>
                     </div>
                   </div>
+                </div>
+
+                {/* Escrow Status Card */}
+                <div className="bg-white rounded-lg shadow-lg p-6 mt-8">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">
+                    Escrows del Proyecto
+                  </h3>
+
+                  {isEscrowsLoading ? (
+                    <p className="text-sm text-gray-600">Cargando escrows...</p>
+                  ) : projectEscrows.length === 0 ? (
+                    <p className="text-sm text-gray-600">Aún no hay escrows para este proyecto.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {projectEscrows.slice(0, 5).map((escrow) => {
+                        const donorId = escrow.donor?._id || escrow.donor?.id;
+                        const creatorId = escrow.creator?._id || escrow.creator?.id;
+                        const userId = user?.id;
+                        const isDonor = Boolean(userId && donorId && userId === donorId);
+                        const isCreator = Boolean(userId && creatorId && userId === creatorId);
+
+                        return (
+                          <div key={escrow._id} className="border border-gray-200 rounded-lg p-3">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <p className="text-xs font-semibold text-gray-700 uppercase">
+                                {getEscrowStatusLabel(escrow.status)}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(escrow.createdAt).toLocaleDateString('es-ES')}
+                              </p>
+                            </div>
+                            <p className="text-sm text-gray-800">
+                              Total: <span className="font-semibold">{escrow.amountTotal} XLM</span>
+                            </p>
+                            <p className="text-sm text-gray-800 mb-3">
+                              Liberado: <span className="font-semibold">{escrow.amountReleased} XLM</span>
+                            </p>
+
+                            <div className="flex gap-2">
+                              {isDonor && (escrow.status === 'funded' || escrow.status === 'partially-released') && (
+                                <button
+                                  onClick={() => handleApproveEscrow(escrow._id)}
+                                  disabled={escrowActionInProgressId === escrow._id}
+                                  className="flex-1 px-3 py-2 text-sm font-semibold rounded bg-amber-100 text-amber-800 hover:bg-amber-200 disabled:opacity-50"
+                                >
+                                  Aprobar
+                                </button>
+                              )}
+
+                              {(isDonor || isCreator) && (escrow.status === 'approved' || escrow.status === 'partially-released') && (
+                                <button
+                                  onClick={() => handleReleaseEscrow(escrow._id)}
+                                  disabled={escrowActionInProgressId === escrow._id}
+                                  className="flex-1 px-3 py-2 text-sm font-semibold rounded bg-blue-100 text-blue-800 hover:bg-blue-200 disabled:opacity-50"
+                                >
+                                  Liberar Fondos
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

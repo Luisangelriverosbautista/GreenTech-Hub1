@@ -44,7 +44,7 @@ export interface Project {
   donations?: any[];
   environmentalImpact?: {
     metric: string;
-    value: string;
+    value: number;
     unit?: string;
   };
   milestones?: Array<{
