@@ -2,11 +2,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const path = require('path');
 
 // Importar rutas
 const routes = require('./routes');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Middleware - CORS configuration
 const allowedOrigins = process.env.CORS_ORIGINS 
@@ -18,6 +20,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Conexión a MongoDB
 // Comprobar explícitamente si SKIP_DB está establecido a la cadena 'true'

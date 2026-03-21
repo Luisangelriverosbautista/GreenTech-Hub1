@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { contentService } from '../services/content.service';
+import { uploadService } from '../services/upload.service';
 import type { BlogPost, CreateBlogPayload, CreateVideoPayload, VideoPost } from '../types/content.types';
 
 type TabType = 'videos' | 'blogs';
@@ -11,6 +12,7 @@ const ContentHub = () => {
   const [videos, setVideos] = useState<VideoPost[]>([]);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -121,6 +123,28 @@ const ContentHub = () => {
     }
   };
 
+  const handleBlogCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      setError(null);
+      setIsUploadingCover(true);
+      const uploaded = await uploadService.uploadImage(file);
+      setBlogForm((prev) => ({
+        ...prev,
+        coverImageUrl: uploaded.url
+      }));
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'No se pudo subir la imagen de portada.');
+    } finally {
+      setIsUploadingCover(false);
+      event.target.value = '';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow">
@@ -207,12 +231,25 @@ const ContentHub = () => {
             className="w-full border rounded-md px-3 py-2"
             rows={7}
           />
-          <input
-            value={blogForm.coverImageUrl}
-            onChange={(e) => setBlogForm((prev) => ({ ...prev, coverImageUrl: e.target.value }))}
-            placeholder="URL de imagen de portada (opcional)"
-            className="w-full border rounded-md px-3 py-2"
-          />
+          <div className="space-y-2">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              onChange={handleBlogCoverUpload}
+              className="w-full border rounded-md px-3 py-2"
+            />
+            <p className="text-xs text-gray-500">Imagen de portada opcional (JPG, PNG, WEBP o GIF, max 5MB).</p>
+            {isUploadingCover && (
+              <p className="text-sm text-blue-700">Subiendo portada...</p>
+            )}
+            {blogForm.coverImageUrl && (
+              <img
+                src={blogForm.coverImageUrl}
+                alt="Vista previa portada"
+                className="w-full h-44 object-cover rounded-md"
+              />
+            )}
+          </div>
           <input
             onChange={(e) => setBlogForm((prev) => ({ ...prev, tags: parseTags(e.target.value) }))}
             placeholder="Tags separados por coma"

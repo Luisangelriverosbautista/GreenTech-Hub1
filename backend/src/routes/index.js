@@ -7,6 +7,7 @@ const projectsRoutes = require('./projects.routes');
 const authRoutes = require('./auth.routes');  // ✅ Usar auth.routes.js (con la ruta connect-wallet)
 const donationsRoutes = require('./donations.routes');
 const contentRoutes = require('./content.routes');
+const uploadRoutes = require('./upload.routes');
 const getSorobanService = require('../../soroban/soroban.service');
 
 // Health check
@@ -19,6 +20,7 @@ router.use('/auth', authRoutes);
 router.use('/soroban', sorobanRoutes);
 router.use('/projects', projectsRoutes);
 router.use('/content', contentRoutes);
+router.use('/uploads', uploadRoutes);
 router.use('/', donationsRoutes);
 
 // Rutas wrapper para wallet (para que el frontend encuentre los endpoints)

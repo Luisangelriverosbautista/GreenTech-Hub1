@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
 import { useProjects } from '../hooks/useProjects';
 import { projectService } from '../services/project.service';
+import { uploadService } from '../services/upload.service';
 
 type MilestoneDraft = {
   description: string;
@@ -101,6 +102,7 @@ const ProjectCreator: React.FC = () => {
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [submitMode, setSubmitMode] = useState<'draft' | 'review'>('draft');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -178,6 +180,29 @@ const ProjectCreator: React.FC = () => {
         milestones: prev.milestones.filter((_, idx) => idx !== index)
       };
     });
+  };
+
+  const handleProjectImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      setError(null);
+      setIsUploadingImage(true);
+      const uploaded = await uploadService.uploadImage(file);
+      setFormData(prev => ({
+        ...prev,
+        imageUrl: uploaded.url
+      }));
+    } catch (err) {
+      const errorMsg = getApiErrorMessage(err);
+      setError(errorMsg || 'No se pudo subir la imagen');
+    } finally {
+      setIsUploadingImage(false);
+      event.target.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -505,20 +530,33 @@ const ProjectCreator: React.FC = () => {
             </div>
           </div>
 
-          {/* URL de Imagen */}
+          {/* Imagen del Proyecto */}
           <div className="mb-6">
-            <label htmlFor="imageUrl" className="block text-gray-700 font-medium mb-2">
-              URL de la Imagen
+            <label htmlFor="projectImage" className="block text-gray-700 font-medium mb-2">
+              Imagen del Proyecto
             </label>
             <input
-              type="url"
-              id="imageUrl"
-              name="imageUrl"
-              value={formData.imageUrl}
-              onChange={handleInputChange}
+              type="file"
+              id="projectImage"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              onChange={handleProjectImageUpload}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="https://ejemplo.com/imagen.jpg"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Sube JPG, PNG, WEBP o GIF (max 5MB).
+            </p>
+            {isUploadingImage && (
+              <p className="text-sm text-blue-700 mt-2">Subiendo imagen...</p>
+            )}
+            {formData.imageUrl && (
+              <div className="mt-3">
+                <img
+                  src={formData.imageUrl}
+                  alt="Vista previa del proyecto"
+                  className="w-full max-h-56 object-cover rounded-md border border-gray-200"
+                />
+              </div>
+            )}
           </div>
 
           {/* Fases del Proyecto */}
