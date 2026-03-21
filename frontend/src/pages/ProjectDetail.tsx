@@ -415,15 +415,34 @@ const ProjectDetail = () => {
   const progress = targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
   const isFunded = targetAmount > 0 && currentAmount >= targetAmount;
   const remainingAmount = Math.max(targetAmount - currentAmount, 0);
+  const milestones = Array.isArray(project.milestones) ? project.milestones : [];
+  const completedMilestones = milestones.filter((milestone) => milestone.completed).length;
+  const milestonesProgressPercent = milestones.length > 0
+    ? (completedMilestones / milestones.length) * 100
+    : 0;
+  const releasedByMilestones = milestones.reduce((acc, milestone) => {
+    if (!milestone.completed) {
+      return acc;
+    }
+
+    const amount = Number.parseFloat(String(milestone.targetAmount || 0));
+    return acc + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
   const effectiveStatus = project.status === 'completed'
     ? 'completed'
     : (project.status === 'cancelled' ? 'cancelled' : (isFunded ? 'funded' : (project.status || 'active')));
   const isFundableStatus = ['approved_for_funding', 'active'].includes(effectiveStatus);
   const categoryBadge = getCategoryBadge(project.category);
   const statusBadge = getStatusBadge(effectiveStatus);
-  const creatorName = typeof project.creator === 'object' && project.creator && 'username' in project.creator 
-    ? (project.creator as any).username 
-    : 'Anónimo';
+  const creatorData = (typeof project.creator === 'object' && project.creator)
+    ? (project.creator as Record<string, unknown>)
+    : null;
+  const creatorName = String(
+    creatorData?.name ||
+    creatorData?.username ||
+    (typeof creatorData?.email === 'string' ? creatorData.email.split('@')[0] : '') ||
+    'Creador verificado'
+  );
 
   return (
     <div className="w-full h-full bg-gray-50 overflow-auto">
@@ -602,6 +621,24 @@ const ProjectDetail = () => {
                     <h2 className="text-2xl font-bold text-gray-900 mb-6">
                       Hitos del Proyecto
                     </h2>
+                    <div className="mb-5 border border-emerald-200 bg-emerald-50 rounded-lg p-4">
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <p className="text-sm font-semibold text-emerald-900">Progreso por Fases</p>
+                        <p className="text-sm font-bold text-emerald-800">
+                          {completedMilestones}/{milestones.length} fases
+                        </p>
+                      </div>
+                      <div className="bg-emerald-100 rounded-full h-2.5 overflow-hidden mb-2">
+                        <div
+                          className="bg-emerald-600 h-full rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min(milestonesProgressPercent, 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-3 text-xs text-emerald-900">
+                        <span>{Math.min(milestonesProgressPercent, 100).toFixed(1)}% completado</span>
+                        <span>{releasedByMilestones.toFixed(2)} XLM en fases completadas</span>
+                      </div>
+                    </div>
                     <div className="space-y-4">
                       {project.milestones.map((milestone, index) => (
                         <div
@@ -784,7 +821,7 @@ const ProjectDetail = () => {
 
                 {/* Donation Card */}
                 {user?.role === 'donor' && isFundableStatus && (
-                  <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
+                  <div className="bg-white rounded-lg shadow-lg p-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-4">
                       Realizar Donación
                     </h3>
@@ -847,6 +884,31 @@ const ProjectDetail = () => {
                         <p className="text-xs text-gray-600">{(project.creator as any).email}</p>
                       )}
                     </div>
+                    {project.walletAddress && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Wallet del Proyecto</p>
+                        <p className="text-xs text-gray-900 font-mono break-all">{project.walletAddress}</p>
+                      </div>
+                    )}
+                    {project.profileType && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Tipo de Creador</p>
+                        <p className="text-sm text-gray-900">{project.profileType === 'organization' ? 'Organización' : 'Persona / Individuo'}</p>
+                      </div>
+                    )}
+                    {(project.location?.address || (project.location?.lat !== undefined && project.location?.lng !== undefined)) && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Ubicación declarada</p>
+                        {project.location?.address && (
+                          <p className="text-sm text-gray-900">{project.location.address}</p>
+                        )}
+                        {project.location?.lat !== undefined && project.location?.lng !== undefined && (
+                          <p className="text-xs text-gray-700 font-mono">
+                            {project.location.lat}, {project.location.lng}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <div className="border-t pt-3">
                       <p className="text-xs font-semibold text-gray-600 uppercase">Estado</p>
                       <p className="text-sm text-gray-900">{statusBadge.label}</p>

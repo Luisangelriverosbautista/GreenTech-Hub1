@@ -55,11 +55,16 @@ const runAutomaticViabilityAnalysis = (projectPayload) => {
         }
     }
 
-    const lat = Number(projectPayload?.location?.lat);
-    const lng = Number(projectPayload?.location?.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-        reasons.push('Coordenadas inválidas o incompletas');
-        score -= 20;
+    const hasLat = projectPayload?.location?.lat !== undefined && projectPayload?.location?.lat !== null && String(projectPayload?.location?.lat).trim() !== '';
+    const hasLng = projectPayload?.location?.lng !== undefined && projectPayload?.location?.lng !== null && String(projectPayload?.location?.lng).trim() !== '';
+
+    if (hasLat || hasLng) {
+        const lat = Number(projectPayload?.location?.lat);
+        const lng = Number(projectPayload?.location?.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            reasons.push('Coordenadas inválidas');
+            score -= 20;
+        }
     }
 
     if (description.length < 80) {
@@ -367,7 +372,7 @@ router.post('/:id/manual-review', auth, async (req, res) => {
 // Obtener un proyecto específico
 router.get('/:id', async (req, res) => {
     try {
-        const project = await Project.findById(req.params.id).populate('creator', 'username email walletAddress');
+        const project = await Project.findById(req.params.id).populate('creator', 'name username email walletAddress');
         if (!project) {
             return res.status(404).json({ error: 'Proyecto no encontrado' });
         }

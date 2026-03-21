@@ -1,8 +1,73 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
 import { useProjects } from '../hooks/useProjects';
 import { projectService } from '../services/project.service';
+
+type MilestoneDraft = {
+  description: string;
+  targetAmount: string;
+  completed: boolean;
+};
+
+const getApiErrorMessage = (err: unknown): string => {
+  if (axios.isAxiosError(err)) {
+    const data = err.response?.data as {
+      error?: string;
+      details?: string;
+      reasons?: string[];
+    } | undefined;
+
+    if (Array.isArray(data?.reasons) && data.reasons.length > 0) {
+      return `La revisión automática falló: ${data.reasons.join(' | ')}`;
+    }
+
+    if (data?.error && data?.details) {
+      return `${data.error}: ${data.details}`;
+    }
+
+    if (data?.error) {
+      return data.error;
+    }
+  }
+
+  return err instanceof Error ? err.message : 'Error al crear el proyecto';
+};
+
+const parseCoordinates = (latRaw: string, lngRaw: string): { lat: number; lng: number } | null => {
+  const normalizedLatRaw = String(latRaw || '').trim();
+  const normalizedLngRaw = String(lngRaw || '').trim();
+
+  // Permite pegar "lat, lng" en un solo campo.
+  const combined = `${normalizedLatRaw} ${normalizedLngRaw}`.trim();
+  const match = combined.match(/(-?\d+(?:[\.,]\d+)?)\s*,\s*(-?\d+(?:[\.,]\d+)?)/);
+  if (match) {
+    const lat = Number.parseFloat(match[1].replace(',', '.'));
+    const lng = Number.parseFloat(match[2].replace(',', '.'));
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return { lat, lng };
+    }
+  }
+
+  const lat = Number.parseFloat(normalizedLatRaw.replace(',', '.'));
+  const lng = Number.parseFloat(normalizedLngRaw.replace(',', '.'));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+
+  return { lat, lng };
+};
+
+const sanitizeMilestones = (milestones: MilestoneDraft[]): MilestoneDraft[] => {
+  return milestones
+    .map((milestone) => ({
+      description: String(milestone.description || '').trim(),
+      targetAmount: String(milestone.targetAmount || '').trim(),
+      completed: false
+    }))
+    .filter((milestone) => milestone.description.length > 0 || milestone.targetAmount.length > 0);
+};
 
 const ProjectCreator: React.FC = () => {
   const navigate = useNavigate();
@@ -26,7 +91,13 @@ const ProjectCreator: React.FC = () => {
       metric: '',
       value: ''
     },
-    milestones: []
+    milestones: [
+      {
+        description: '',
+        targetAmount: '',
+        completed: false
+      }
+    ] as MilestoneDraft[]
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,6 +144,42 @@ const ProjectCreator: React.FC = () => {
     }
   };
 
+  const updateMilestone = (index: number, field: 'description' | 'targetAmount', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      milestones: prev.milestones.map((milestone, idx) =>
+        idx === index ? { ...milestone, [field]: value } : milestone
+      )
+    }));
+  };
+
+  const addMilestone = () => {
+    setFormData(prev => ({
+      ...prev,
+      milestones: [
+        ...prev.milestones,
+        {
+          description: '',
+          targetAmount: '',
+          completed: false
+        }
+      ]
+    }));
+  };
+
+  const removeMilestone = (index: number) => {
+    setFormData(prev => {
+      if (prev.milestones.length === 1) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        milestones: prev.milestones.filter((_, idx) => idx !== index)
+      };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
@@ -86,15 +193,56 @@ const ProjectCreator: React.FC = () => {
         throw new Error('La meta debe ser mayor a 0');
       }
 
-      const parsedLat = Number.parseFloat(formData.location.lat || '');
-      const parsedLng = Number.parseFloat(formData.location.lng || '');
+      const parsedCoordinates = parseCoordinates(formData.location.lat, formData.location.lng);
       const kycDocuments = formData.kycDocumentsCsv
         .split(',')
         .map(v => v.trim())
         .filter(Boolean);
+      const cleanedMilestones = sanitizeMilestones(formData.milestones);
 
       if (submitMode === 'review' && kycDocuments.length === 0) {
         throw new Error('Para enviar a revisión debes cargar al menos un documento KYC (URL).');
+      }
+
+      if (submitMode === 'review' && formData.description.trim().length < 80) {
+        throw new Error('Para enviar a revisión, la descripción debe tener al menos 80 caracteres.');
+      }
+
+      if (submitMode === 'review' && cleanedMilestones.length < 2) {
+        throw new Error('Para enviar a revisión debes definir al menos 2 fases/hitos del proyecto.');
+      }
+
+      if (submitMode === 'review') {
+        const hasInvalidMilestone = cleanedMilestones.some((milestone) => {
+          const amount = Number.parseFloat(milestone.targetAmount);
+          return milestone.description.length < 8 || !Number.isFinite(amount) || amount <= 0;
+        });
+
+        if (hasInvalidMilestone) {
+          throw new Error('Cada fase debe tener descripción clara (mínimo 8 caracteres) y monto mayor a 0.');
+        }
+
+        const milestonesTotal = cleanedMilestones.reduce((acc, milestone) => {
+          const value = Number.parseFloat(milestone.targetAmount);
+          return acc + (Number.isFinite(value) ? value : 0);
+        }, 0);
+        const target = Number.parseFloat(formData.targetAmount);
+
+        if (Math.abs(milestonesTotal - target) > 0.01) {
+          throw new Error('La suma de las fases debe coincidir con la meta total del proyecto.');
+        }
+      }
+
+      if (submitMode === 'review' && parsedCoordinates) {
+        const hasValidCoordinates =
+          parsedCoordinates.lat >= -90 &&
+          parsedCoordinates.lat <= 90 &&
+          parsedCoordinates.lng >= -180 &&
+          parsedCoordinates.lng <= 180;
+
+        if (!hasValidCoordinates) {
+          throw new Error('Si capturas coordenadas, deben ser válidas (lat -90..90, lng -180..180).');
+        }
       }
 
       // Crear proyecto como borrador
@@ -107,15 +255,15 @@ const ProjectCreator: React.FC = () => {
         profileType: formData.profileType,
         kycDocuments,
         location: {
-          lat: Number.isFinite(parsedLat) ? parsedLat : undefined,
-          lng: Number.isFinite(parsedLng) ? parsedLng : undefined,
+          lat: parsedCoordinates?.lat,
+          lng: parsedCoordinates?.lng,
           address: formData.location.address || undefined
         },
         environmentalImpact: {
           metric: formData.environmentalImpact.metric || 'impacto',
           value: Number.parseFloat(formData.environmentalImpact.value || '0') || 0
         },
-        milestones: formData.milestones.length > 0 ? formData.milestones : [
+        milestones: cleanedMilestones.length > 0 ? cleanedMilestones : [
           {
             description: 'Meta inicial',
             targetAmount: formData.targetAmount,
@@ -139,7 +287,7 @@ const ProjectCreator: React.FC = () => {
         navigate(`/project/${newProject._id || newProject.id}`);
       }, 2000);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Error al crear el proyecto';
+      const errorMsg = getApiErrorMessage(err);
       setError(errorMsg);
       console.error('Error creating project:', err);
     } finally {
@@ -276,7 +424,7 @@ const ProjectCreator: React.FC = () => {
                 value={formData.location.lat}
                 onChange={(e) => setFormData(prev => ({ ...prev, location: { ...prev.location, lat: e.target.value } }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Ej: 19.4326"
+                placeholder="Ej: 19.427302"
               />
             </div>
             <div>
@@ -287,7 +435,7 @@ const ProjectCreator: React.FC = () => {
                 value={formData.location.lng}
                 onChange={(e) => setFormData(prev => ({ ...prev, location: { ...prev.location, lng: e.target.value } }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Ej: -99.1332"
+                placeholder="Ej: -99.174806"
               />
             </div>
             <div>
@@ -371,6 +519,62 @@ const ProjectCreator: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="https://ejemplo.com/imagen.jpg"
             />
+          </div>
+
+          {/* Fases del Proyecto */}
+          <div className="mb-6 border border-emerald-200 rounded-lg p-4 bg-emerald-50">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <h3 className="text-base font-bold text-emerald-900">Fases / Hitos del Proyecto</h3>
+                <p className="text-sm text-emerald-800">
+                  Esto se mostrará al donante para darle claridad de ejecución y confianza.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addMilestone}
+                className="px-3 py-2 text-sm font-semibold bg-emerald-700 text-white rounded-md hover:bg-emerald-800"
+              >
+                + Agregar Fase
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {formData.milestones.map((milestone, index) => (
+                <div key={`milestone-${index}`} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-white border border-emerald-100 rounded-md p-3">
+                  <div className="md:col-span-7">
+                    <input
+                      type="text"
+                      value={milestone.description}
+                      onChange={(e) => updateMilestone(index, 'description', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder={`Fase ${index + 1}: Ej. Compra e instalación de paneles`}
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={milestone.targetAmount}
+                      onChange={(e) => updateMilestone(index, 'targetAmount', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="Monto XLM"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <button
+                      type="button"
+                      onClick={() => removeMilestone(index)}
+                      disabled={formData.milestones.length <= 1}
+                      className="w-full px-3 py-2 text-sm font-semibold rounded-md bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-40"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Botones */}
