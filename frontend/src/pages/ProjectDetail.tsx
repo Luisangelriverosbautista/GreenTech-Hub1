@@ -170,7 +170,7 @@ const ProjectDetail = () => {
   const activeEscrow = projectEscrows.find(e => ['funded', 'approved', 'partially-released'].includes(e.status)) || projectEscrows[0] || null;
   const activeEscrowDonorId = activeEscrow ? (activeEscrow.donor?._id || activeEscrow.donor?.id) : null;
   const activeEscrowCreatorId = activeEscrow ? (activeEscrow.creator?._id || activeEscrow.creator?.id) : null;
-  const currentUserId = user?.id || null;
+  const currentUserId = user?._id || user?.id || null;
   const canSubmitProgress = Boolean(activeEscrow && currentUserId && activeEscrowCreatorId && currentUserId === activeEscrowCreatorId);
   const canReviewProgress = Boolean(activeEscrow && currentUserId && activeEscrowDonorId && currentUserId === activeEscrowDonorId);
 
@@ -663,6 +663,12 @@ const ProjectDetail = () => {
                       </div>
                     )}
 
+                    {!canSubmitProgress && !canReviewProgress && activeEscrow && (
+                      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 mb-3">
+                        Este panel muestra acciones solo para participantes del escrow. Si eres creador, puedes subir evidencia. Si eres donante, puedes aprobar/rechazar y liberar.
+                      </p>
+                    )}
+
                     {isProgressLoading ? (
                       <p className="text-sm text-gray-600">Cargando avances...</p>
                     ) : progressUpdates.length === 0 ? (
@@ -833,7 +839,7 @@ const ProjectDetail = () => {
                       {projectEscrows.slice(0, 5).map((escrow) => {
                         const donorId = escrow.donor?._id || escrow.donor?.id;
                         const creatorId = escrow.creator?._id || escrow.creator?.id;
-                        const userId = user?.id;
+                        const userId = user?._id || user?.id;
                         const isDonor = Boolean(userId && donorId && userId === donorId);
                         const isCreator = Boolean(userId && creatorId && userId === creatorId);
 
