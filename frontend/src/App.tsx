@@ -10,6 +10,7 @@ import ProjectCreator from './pages/ProjectCreator'
 import Dashboard from './pages/Dashboard'
 import Wallet from './pages/Wallet'
 import ContentHub from './pages/ContentHub'
+import CurationPanel from './pages/CurationPanel'
 import About from './pages/About'
 import Contact from './pages/Contact'
 
@@ -32,6 +33,24 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   ) : (
     <Navigate to="/login" state={{ from: location }} replace />
   );
+};
+
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return user.role === 'admin' ? children : <Navigate to="/dashboard" replace />;
 };
 
 function App() {
@@ -74,6 +93,14 @@ function App() {
               <PrivateRoute>
                 <ContentHub />
               </PrivateRoute>
+            }
+          />
+          <Route
+            path="/curation"
+            element={
+              <AdminRoute>
+                <CurationPanel />
+              </AdminRoute>
             }
           />
           <Route path="/about" element={<About />} />

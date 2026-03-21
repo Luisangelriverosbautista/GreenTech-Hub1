@@ -7,7 +7,7 @@ import { ShareProject } from '../components/ShareProject';
 import type { Project } from '../types';
 import projectService from '../services/project.service';
 import { escrowService, type Escrow, type ProgressUpdate } from '../services/escrow.service';
-import { getAddress } from '@stellar/freighter-api';
+import { getAddress, signMessage } from '@stellar/freighter-api';
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -103,12 +103,44 @@ const ProjectDetail = () => {
         throw new Error('No se pudo obtener la dirección de Freighter');
       }
 
+      const consentNonce = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const consentMessage = [
+        'GreenTech Hub - Autorización de donación escrow',
+        `Proyecto: ${project.title}`,
+        `Monto: ${donationAmount} XLM`,
+        `Donante: ${walletResult.address}`,
+        `Nonce: ${consentNonce}`
+      ].join('\n');
+
+      const signedMessageResult = await signMessage(consentMessage, { address: walletResult.address });
+      if (signedMessageResult.error || !signedMessageResult.signedMessage) {
+        throw new Error(signedMessageResult.error?.message || 'Firma de autorización cancelada o inválida');
+      }
+
+      const rawSignedMessage = signedMessageResult.signedMessage as any;
+      const consentSignature = typeof rawSignedMessage === 'string'
+        ? rawSignedMessage
+        : Array.isArray(rawSignedMessage?.data)
+          ? btoa(String.fromCharCode(...rawSignedMessage.data))
+          : btoa(String(rawSignedMessage));
+      if (!consentSignature) {
+        throw new Error('Firma de autorización cancelada o inválida');
+      }
+
       await escrowService.donateWithEscrow(project._id || project.id || '', {
         amount: donationAmount.toString(),
         donorAddress: walletResult.address,
         metadata: {
           source: 'project-detail',
-          projectTitle: project.title
+          projectTitle: project.title,
+          walletConsent: {
+            type: 'freighter-sign-message',
+            message: consentMessage,
+            signature: consentSignature,
+            signedAt: new Date().toISOString(),
+            walletAddress: walletResult.address,
+            nonce: consentNonce
+          }
         }
       });
 
@@ -167,10 +199,15 @@ const ProjectDetail = () => {
     }
   };
 
-  const activeEscrow = projectEscrows.find(e => ['funded', 'approved', 'partially-released'].includes(e.status)) || projectEscrows[0] || null;
+  const currentUserId = user?._id || user?.id || null;
+  const participantEscrow = projectEscrows.find((escrow) => {
+    const donorId = escrow.donor?._id || escrow.donor?.id;
+    const creatorId = escrow.creator?._id || escrow.creator?.id;
+    return Boolean(currentUserId && (currentUserId === donorId || currentUserId === creatorId));
+  });
+  const activeEscrow = participantEscrow || projectEscrows.find(e => ['funded', 'approved', 'partially-released'].includes(e.status)) || projectEscrows[0] || null;
   const activeEscrowDonorId = activeEscrow ? (activeEscrow.donor?._id || activeEscrow.donor?.id) : null;
   const activeEscrowCreatorId = activeEscrow ? (activeEscrow.creator?._id || activeEscrow.creator?.id) : null;
-  const currentUserId = user?._id || user?.id || null;
   const canSubmitProgress = Boolean(activeEscrow && currentUserId && activeEscrowCreatorId && currentUserId === activeEscrowCreatorId);
   const canReviewProgress = Boolean(activeEscrow && currentUserId && activeEscrowDonorId && currentUserId === activeEscrowDonorId);
 
@@ -180,6 +217,10 @@ const ProjectDetail = () => {
       const response = await escrowService.getProgressUpdates(escrowId);
       setProgressUpdates(response.updates || []);
     } catch (progressError) {
+      if (axios.isAxiosError(progressError) && progressError.response?.status === 403) {
+        setProgressUpdates([]);
+        return;
+      }
       console.error('Error al cargar avances:', progressError);
       setProgressUpdates([]);
     } finally {
@@ -282,12 +323,12 @@ const ProjectDetail = () => {
   }, [id, user]);
 
   useEffect(() => {
-    if (activeEscrow?._id) {
+    if (activeEscrow?._id && (canSubmitProgress || canReviewProgress)) {
       loadProgressUpdates(activeEscrow._id);
     } else {
       setProgressUpdates([]);
     }
-  }, [activeEscrow?._id]);
+  }, [activeEscrow?._id, canSubmitProgress, canReviewProgress]);
 
   const getProgressStatusLabel = (status: ProgressUpdate['status']) => {
     const map: Record<ProgressUpdate['status'], string> = {
@@ -326,6 +367,12 @@ const ProjectDetail = () => {
 
   const getStatusBadge = (status: string) => {
     const statusMap: { [key: string]: { label: string; color: string } } = {
+      'draft': { label: 'Borrador', color: 'bg-gray-100 text-gray-800' },
+      'kyc_pending': { label: 'KYC Pendiente', color: 'bg-amber-100 text-amber-800' },
+      'kyc_verified': { label: 'KYC Verificado', color: 'bg-cyan-100 text-cyan-800' },
+      'auto_review_failed': { label: 'Revisión Automática Fallida', color: 'bg-red-100 text-red-800' },
+      'manual_review_pending': { label: 'Curaduría Pendiente', color: 'bg-orange-100 text-orange-800' },
+      'approved_for_funding': { label: 'Aprobado para Fondeo', color: 'bg-emerald-100 text-emerald-800' },
       'active': { label: 'Activo', color: 'bg-blue-100 text-blue-800' },
       'funded': { label: 'Financiado', color: 'bg-green-100 text-green-800' },
       'completed': { label: 'Completado', color: 'bg-purple-100 text-purple-800' },
@@ -371,6 +418,7 @@ const ProjectDetail = () => {
   const effectiveStatus = project.status === 'completed'
     ? 'completed'
     : (project.status === 'cancelled' ? 'cancelled' : (isFunded ? 'funded' : (project.status || 'active')));
+  const isFundableStatus = ['approved_for_funding', 'active'].includes(effectiveStatus);
   const categoryBadge = getCategoryBadge(project.category);
   const statusBadge = getStatusBadge(effectiveStatus);
   const creatorName = typeof project.creator === 'object' && project.creator && 'username' in project.creator 
@@ -735,7 +783,7 @@ const ProjectDetail = () => {
                 </div>
 
                 {/* Donation Card */}
-                {user?.role === 'donor' && effectiveStatus === 'active' && (
+                {user?.role === 'donor' && isFundableStatus && (
                   <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
                     <h3 className="text-xl font-bold text-gray-900 mb-4">
                       Realizar Donación

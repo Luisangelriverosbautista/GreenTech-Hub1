@@ -1,5 +1,5 @@
 // Role type
-export type UserRole = 'donor' | 'creator';
+export type UserRole = 'donor' | 'creator' | 'admin';
 
 // User types
 export interface User {
@@ -36,7 +36,19 @@ export interface Project {
   imageUrl?: string;
   walletAddress?: string;
   funded?: boolean;
-  status?: 'pending' | 'active' | 'funded' | 'completed' | 'cancelled';
+  status?:
+    | 'pending'
+    | 'draft'
+    | 'kyc_pending'
+    | 'kyc_verified'
+    | 'auto_review_failed'
+    | 'manual_review_pending'
+    | 'approved_for_funding'
+    | 'active'
+    | 'funded'
+    | 'completed'
+    | 'rejected'
+    | 'cancelled';
   raisedAmount?: number;
   transactions?: Transaction[];
   progress?: number;
@@ -53,6 +65,13 @@ export interface Project {
     completed: boolean;
     completedAt?: Date;
   }>;
+  location?: {
+    lat?: number;
+    lng?: number;
+    address?: string;
+  };
+  profileType?: 'individual' | 'organization';
+  kycDocuments?: string[];
   tokenRewards?: string;
   createdAt?: string;
   updatedAt?: string;

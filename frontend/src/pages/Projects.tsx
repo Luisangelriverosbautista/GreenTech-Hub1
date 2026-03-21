@@ -77,7 +77,8 @@ const Projects: React.FC = () => {
     const remainingValue = Math.max(targetAmount - currentAmount, 0);
     const remaining = remainingValue.toFixed(2);
     const isFunded = targetAmount > 0 && currentAmount >= targetAmount;
-    const isDonationDisabled = isDonating || project.status !== 'active' || isFunded;
+    const isFundableStatus = ['approved_for_funding', 'active'].includes(project.status);
+    const isDonationDisabled = isDonating || !isFundableStatus || isFunded;
 
     return (
       <div className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full flex flex-col">
@@ -176,6 +177,11 @@ const Projects: React.FC = () => {
           {(project.status === 'funded' || isFunded) && (
             <div className="mt-2 bg-green-50 border border-green-200 rounded px-2 py-1 text-center">
               <p className="text-xs font-bold text-green-700">✅ Meta Alcanzada</p>
+            </div>
+          )}
+          {['draft', 'kyc_pending', 'kyc_verified', 'auto_review_failed', 'manual_review_pending'].includes(project.status) && (
+            <div className="mt-2 bg-amber-50 border border-amber-200 rounded px-2 py-1 text-center">
+              <p className="text-xs font-bold text-amber-700">⏳ En validación de fondeo</p>
             </div>
           )}
         </div>

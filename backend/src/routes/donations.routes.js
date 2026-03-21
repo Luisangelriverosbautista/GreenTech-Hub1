@@ -33,6 +33,10 @@ const getEscrowReleaseAmount = (escrow, milestoneIndex = 0, requestedAmount = nu
     return remaining.isGreaterThan(0) ? remaining.toString() : '0';
 };
 
+const isProjectOpenForFunding = (projectStatus = '') => {
+    return ['approved_for_funding', 'active'].includes(String(projectStatus));
+};
+
 // 1. Obtener TODOS los proyectos activos con su progreso
 router.get('/projects', async (req, res) => {
     try {
@@ -128,8 +132,8 @@ router.post('/projects/:projectId/donate', auth, async (req, res) => {
             return res.status(404).json({ error: 'Proyecto no encontrado' });
         }
         
-        if (project.status !== 'active') {
-            return res.status(400).json({ error: 'El proyecto no está activo' });
+        if (!isProjectOpenForFunding(project.status)) {
+            return res.status(400).json({ error: 'El proyecto aún no está habilitado para fondeo' });
         }
 
         if (!project.walletAddress) {
@@ -189,9 +193,23 @@ router.post('/projects/:projectId/donate-escrow', auth, async (req, res) => {
     try {
         const { projectId } = req.params;
         const { amount, donorAddress, metadata = {} } = req.body;
+        const walletConsent = metadata?.walletConsent;
 
         if (!amount || !donorAddress) {
             return res.status(400).json({ error: 'amount y donorAddress son requeridos' });
+        }
+
+        if (!walletConsent || !walletConsent.message || !walletConsent.signature || !walletConsent.walletAddress) {
+            return res.status(400).json({
+                error: 'Firma de autorización requerida',
+                details: 'Debes firmar la autorización de escrow en Freighter antes de donar'
+            });
+        }
+
+        if (walletConsent.walletAddress !== donorAddress) {
+            return res.status(400).json({
+                error: 'La wallet firmante no coincide con donorAddress'
+            });
         }
 
         const amountNumber = Number.parseFloat(String(amount));
@@ -213,8 +231,8 @@ router.post('/projects/:projectId/donate-escrow', auth, async (req, res) => {
             return res.status(404).json({ error: 'Proyecto no encontrado' });
         }
 
-        if (project.status !== 'active') {
-            return res.status(400).json({ error: 'El proyecto no está activo' });
+        if (!isProjectOpenForFunding(project.status)) {
+            return res.status(400).json({ error: 'El proyecto aún no está habilitado para fondeo' });
         }
 
         if (!project.creator || !project.creator.walletAddress) {

@@ -26,7 +26,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'donor' | 'creator';
+  role: 'donor' | 'creator' | 'admin';
   walletAddress?: string;
   walletConnected: boolean;
   createdAt: string;

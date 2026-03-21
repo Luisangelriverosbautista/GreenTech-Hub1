@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['donor', 'creator'],
+    enum: ['donor', 'creator', 'admin'],
     required: true
   },
   walletAddress: {

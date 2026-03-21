@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useProjects } from '../hooks/useProjects';
+import { projectService } from '../services/project.service';
 
 const ProjectCreator: React.FC = () => {
   const navigate = useNavigate();
@@ -14,6 +15,13 @@ const ProjectCreator: React.FC = () => {
     targetAmount: '',
     category: 'renewable-energy',
     imageUrl: '',
+    profileType: 'individual' as 'individual' | 'organization',
+    kycDocumentsCsv: '',
+    location: {
+      lat: '',
+      lng: '',
+      address: ''
+    },
     environmentalImpact: {
       metric: '',
       value: ''
@@ -22,8 +30,10 @@ const ProjectCreator: React.FC = () => {
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMode, setSubmitMode] = useState<'draft' | 'review'>('draft');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Validar que el usuario tenga wallet conectada
   if (!user?.walletAddress) {
@@ -76,13 +86,31 @@ const ProjectCreator: React.FC = () => {
         throw new Error('La meta debe ser mayor a 0');
       }
 
-      // Crear proyecto
+      const parsedLat = Number.parseFloat(formData.location.lat || '');
+      const parsedLng = Number.parseFloat(formData.location.lng || '');
+      const kycDocuments = formData.kycDocumentsCsv
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean);
+
+      if (submitMode === 'review' && kycDocuments.length === 0) {
+        throw new Error('Para enviar a revisión debes cargar al menos un documento KYC (URL).');
+      }
+
+      // Crear proyecto como borrador
       const newProject = await createProject({
         title: formData.title.trim(),
         description: formData.description.trim(),
         targetAmount: formData.targetAmount,
         category: formData.category,
         imageUrl: formData.imageUrl || '',
+        profileType: formData.profileType,
+        kycDocuments,
+        location: {
+          lat: Number.isFinite(parsedLat) ? parsedLat : undefined,
+          lng: Number.isFinite(parsedLng) ? parsedLng : undefined,
+          address: formData.location.address || undefined
+        },
         environmentalImpact: {
           metric: formData.environmentalImpact.metric || 'impacto',
           value: Number.parseFloat(formData.environmentalImpact.value || '0') || 0
@@ -95,6 +123,13 @@ const ProjectCreator: React.FC = () => {
           }
         ]
       });
+
+      if (submitMode === 'review') {
+        await projectService.submitProjectForReview(newProject._id || newProject.id || '');
+        setSuccessMessage('Proyecto enviado a revisión. Pasará por KYC, análisis automático y curaduría manual antes de habilitar donaciones.');
+      } else {
+        setSuccessMessage('Proyecto guardado como borrador. Completa KYC y envíalo a revisión cuando estés listo.');
+      }
 
       setSuccess(true);
       console.log('✅ Proyecto creado exitosamente:', newProject);
@@ -120,9 +155,7 @@ const ProjectCreator: React.FC = () => {
             <div className="text-5xl">✅</div>
           </div>
           <h2 className="text-2xl font-bold text-green-600 mb-4">¡Proyecto Creado!</h2>
-          <p className="text-gray-700 mb-6">
-            Tu proyecto se ha creado exitosamente y está visible para los donantes.
-          </p>
+          <p className="text-gray-700 mb-6">{successMessage}</p>
           <p className="text-sm text-gray-500">Redirigiendo...</p>
         </div>
       </div>
@@ -201,6 +234,74 @@ const ProjectCreator: React.FC = () => {
             </select>
           </div>
 
+          {/* Perfil y KYC */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label htmlFor="profileType" className="block text-gray-700 font-medium mb-2">
+                Tipo de Creador
+              </label>
+              <select
+                id="profileType"
+                name="profileType"
+                value={formData.profileType}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="individual">Persona / Individuo</option>
+                <option value="organization">Organización</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="kycDocumentsCsv" className="block text-gray-700 font-medium mb-2">
+                Documentos KYC (URLs, separadas por coma)
+              </label>
+              <input
+                type="text"
+                id="kycDocumentsCsv"
+                value={formData.kycDocumentsCsv}
+                onChange={(e) => setFormData(prev => ({ ...prev, kycDocumentsCsv: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="https://...doc1, https://...doc2"
+              />
+            </div>
+          </div>
+
+          {/* Ubicación del Proyecto */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Latitud</label>
+              <input
+                type="number"
+                step="0.000001"
+                value={formData.location.lat}
+                onChange={(e) => setFormData(prev => ({ ...prev, location: { ...prev.location, lat: e.target.value } }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Ej: 19.4326"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Longitud</label>
+              <input
+                type="number"
+                step="0.000001"
+                value={formData.location.lng}
+                onChange={(e) => setFormData(prev => ({ ...prev, location: { ...prev.location, lng: e.target.value } }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Ej: -99.1332"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Dirección (opcional)</label>
+              <input
+                type="text"
+                value={formData.location.address}
+                onChange={(e) => setFormData(prev => ({ ...prev, location: { ...prev.location, address: e.target.value } }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Colonia, ciudad o referencia"
+              />
+            </div>
+          </div>
+
           {/* Meta de Financiamiento */}
           <div className="mb-6">
             <label htmlFor="targetAmount" className="block text-gray-700 font-medium mb-2">
@@ -276,15 +377,24 @@ const ProjectCreator: React.FC = () => {
           <div className="flex gap-4">
             <button 
               type="submit"
+              onClick={() => setSubmitMode('draft')}
               disabled={isSubmitting}
               className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400"
             >
-              {isSubmitting ? 'Creando...' : 'Crear Proyecto'}
+              {isSubmitting && submitMode === 'draft' ? 'Guardando...' : 'Guardar Borrador'}
+            </button>
+            <button 
+              type="submit"
+              onClick={() => setSubmitMode('review')}
+              disabled={isSubmitting}
+              className="flex-1 bg-emerald-700 text-white py-2 px-4 rounded-md hover:bg-emerald-800 transition-colors disabled:bg-gray-400"
+            >
+              {isSubmitting && submitMode === 'review' ? 'Enviando...' : 'Enviar a Revisión'}
             </button>
             <button 
               type="button"
               onClick={() => navigate('/projects')}
-              className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+              className="bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
             >
               Cancelar
             </button>

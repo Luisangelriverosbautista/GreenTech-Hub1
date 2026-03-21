@@ -32,6 +32,38 @@ class ProjectService {
     }
   }
 
+  async updateProjectKyc(id: string, payload: { profileType: 'individual' | 'organization'; documents: string[] }): Promise<Project> {
+    const response = await api.patch<Project>(`/projects/${id}/kyc`, payload);
+    return response.data;
+  }
+
+  async submitProjectForReview(id: string): Promise<{ message: string; score: number; project: Project }> {
+    const response = await api.post<{ message: string; score: number; project: Project }>(`/projects/${id}/submit-review`);
+    return response.data;
+  }
+
+  async getManualReviewQueue(adminKey: string): Promise<{ count: number; projects: Project[] }> {
+    const response = await api.get<{ count: number; projects: Project[] }>('/projects/review-queue/manual', {
+      headers: {
+        'x-review-admin-key': adminKey
+      }
+    });
+    return response.data;
+  }
+
+  async submitManualReview(
+    id: string,
+    payload: { decision: 'approve' | 'reject'; notes?: string },
+    adminKey: string
+  ): Promise<Project> {
+    const response = await api.post<Project>(`/projects/${id}/manual-review`, payload, {
+      headers: {
+        'x-review-admin-key': adminKey
+      }
+    });
+    return response.data;
+  }
+
   async updateProject(id: string, project: Partial<Omit<Project, 'id' | 'walletAddress' | 'creatorId' | 'funded' | 'transactions' | 'status'>>): Promise<Project> {
     const response = await api.put<Project>(`/projects/${id}`, project);
     return response.data;

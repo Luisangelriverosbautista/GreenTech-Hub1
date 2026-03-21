@@ -32,6 +32,12 @@ const ContentIcon = () => (
   </svg>
 );
 
+const CurationIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+  </svg>
+);
+
 const CreateProjectIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/>
@@ -115,6 +121,16 @@ export const Sidebar = ({ user, collapsed = false }: SidebarProps) => {
           >
             {!collapsed && 'Contenido'}
           </NavItem>
+
+          {user.role === 'admin' && (
+            <NavItem
+              to="/curation"
+              icon={<CurationIcon />}
+              isActive={isActive('/curation')}
+            >
+              {!collapsed && 'Curaduría'}
+            </NavItem>
+          )}
 
           {user.role === 'donor' && (
             <NavItem
