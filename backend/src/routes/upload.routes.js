@@ -1,7 +1,6 @@
 const express = require('express');
 const multer = require('multer');
 const mongoose = require('mongoose');
-const { GridFSBucket, ObjectId } = require('mongodb');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -26,7 +25,7 @@ function getGridFsBucket() {
     return null;
   }
 
-  return new GridFSBucket(mongoose.connection.db, { bucketName: 'images' });
+  return new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: 'images' });
 }
 
 router.post('/image', auth, (req, res) => {
@@ -85,11 +84,11 @@ router.get('/image/:id', async (req, res) => {
       return res.status(503).json({ error: 'Base de datos no disponible' });
     }
 
-    if (!ObjectId.isValid(req.params.id)) {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ error: 'ID de imagen inválido' });
     }
 
-    const fileId = new ObjectId(req.params.id);
+    const fileId = new mongoose.Types.ObjectId(req.params.id);
     const files = await bucket.find({ _id: fileId }).toArray();
     if (!files || files.length === 0) {
       return res.status(404).json({ error: 'Imagen no encontrada' });
