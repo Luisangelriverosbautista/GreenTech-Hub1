@@ -2,7 +2,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
-import { useDonations } from '../hooks/useDonations';
 import { ShareProject } from '../components/ShareProject';
 import type { Project } from '../types';
 import projectService from '../services/project.service';
@@ -13,14 +12,12 @@ const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { makeDonation, isDonating } = useDonations();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [donationAmount, setDonationAmount] = useState('');
-  const [donationSuccess, setDonationSuccess] = useState(false);
   const [escrowSuccess, setEscrowSuccess] = useState(false);
   const [isEscrowDonating, setIsEscrowDonating] = useState(false);
   const [projectEscrows, setProjectEscrows] = useState<Escrow[]>([]);
@@ -66,27 +63,6 @@ const ProjectDetail = () => {
       console.error('Error al cargar escrows:', escrowLoadError);
     } finally {
       setIsEscrowsLoading(false);
-    }
-  };
-
-  const handleDonate = async () => {
-    if (!user || !project || !donationAmount || !project.walletAddress) return;
-
-    try {
-      setActionError(null);
-      setActionMessage(null);
-      await makeDonation(
-        project._id || project.id || '',
-        donationAmount.toString(),
-        project.walletAddress
-      );
-      setDonationSuccess(true);
-      setDonationAmount('');
-      setTimeout(() => setDonationSuccess(false), 5000);
-      await loadProject(id!);
-    } catch (error: unknown) {
-      console.error('Error en la donación:', error);
-      setActionError('Error al procesar la donación');
     }
   };
 
@@ -432,6 +408,16 @@ const ProjectDetail = () => {
     ? 'completed'
     : (project.status === 'cancelled' ? 'cancelled' : (isFunded ? 'funded' : (project.status || 'active')));
   const isFundableStatus = ['approved_for_funding', 'active'].includes(effectiveStatus);
+  const parsedDonationAmount = Number.parseFloat(donationAmount);
+  const hasValidDonationAmount = Number.isFinite(parsedDonationAmount) && parsedDonationAmount > 0;
+  const donateButtonDisabled = !hasValidDonationAmount || isEscrowDonating || isFunded;
+  const donateButtonHelpText = isFunded
+    ? 'Este proyecto ya alcanzó su meta y no acepta más donaciones.'
+    : !hasValidDonationAmount
+      ? 'Ingresa una cantidad mayor a 0 para habilitar la donación.'
+      : isEscrowDonating
+        ? 'Se está procesando tu donación con escrow.'
+        : '';
   const categoryBadge = getCategoryBadge(project.category);
   const statusBadge = getStatusBadge(effectiveStatus);
   const creatorData = (typeof project.creator === 'object' && project.creator)
@@ -463,12 +449,6 @@ const ProjectDetail = () => {
         <div className="w-full px-4 py-8">
           <div className="max-w-6xl mx-auto">
             {/* Mensajes de éxito */}
-            {donationSuccess && (
-              <div className="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
-                <p className="font-semibold">¡Donación realizada exitosamente!</p>
-              </div>
-            )}
-
             {escrowSuccess && (
               <div className="mb-6 bg-blue-100 border border-blue-400 text-blue-800 px-4 py-3 rounded-lg">
                 <p className="font-semibold">Escrow creado correctamente. Fondos en custodia hasta liberación.</p>
@@ -829,7 +809,7 @@ const ProjectDetail = () => {
                     {project.tokenRewards && (
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                         <p className="text-sm text-blue-900">
-                          <span className="font-semibold">Recompensa:</span> {project.tokenRewards} tokens por XLM
+                          <span className="font-semibold">Reconocimiento:</span> al concluir el proyecto se otorgara un reconocimiento de impacto digital a quienes apoyaron su financiamiento.
                         </p>
                       </div>
                     )}
@@ -845,19 +825,18 @@ const ProjectDetail = () => {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       />
                       <button
-                        onClick={handleDonate}
-                        disabled={!donationAmount || isDonating || isFunded}
-                        className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isDonating ? 'Procesando...' : 'Donar'}
-                      </button>
-                      <button
                         onClick={handleDonateWithEscrow}
-                        disabled={!donationAmount || isEscrowDonating || isFunded}
+                        disabled={donateButtonDisabled}
+                        title={donateButtonHelpText}
                         className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isEscrowDonating ? 'Creando escrow...' : 'Donar con Escrow'}
                       </button>
+                      {donateButtonHelpText && (
+                        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                          {donateButtonHelpText}
+                        </p>
+                      )}
                     </div>
 
                     <div className="bg-gray-50 rounded-lg p-4">

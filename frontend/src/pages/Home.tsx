@@ -51,7 +51,7 @@ function Home() {
 
             <p className="text-gray-600 text-lg sm:text-xl max-w-2xl mx-auto mb-12">
               Conecta con personas, organizaciones y empresas comprometidas con la sostenibilidad. 
-              Crea contenido educativo, participa en eventos y gana tokens por tus acciones ambientales.
+              Crea contenido educativo, participa en eventos y recibe reconocimiento de impacto digital por tus aportes ambientales.
             </p>
 
             {/* Botones acordes al proyecto */}
@@ -248,9 +248,9 @@ function Home() {
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-3xl">💰</span>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Gana Tokens</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Reconocimiento Digital</h3>
                 <p className="text-gray-600">
-                  Recibe recompensas por tus contribuciones a través de la blockchain
+                  Recibe un reconocimiento de impacto digital cuando los proyectos que apoyaste concluyan satisfactoriamente
                 </p>
               </div>
 
