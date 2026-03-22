@@ -10,6 +10,14 @@ export interface User {
   email: string;
   role?: UserRole;
   walletAddress?: string;
+  creatorValidation?: {
+    country?: string;
+    organizationName?: string;
+    governmentId?: string;
+    website?: string;
+    verificationDocumentUrl?: string;
+    submittedAt?: string;
+  };
   walletConnected?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -30,7 +38,16 @@ export interface Project {
   metaAmount?: number;
   currentAmount?: string | number;
   creatorId?: string;
-  creator?: User | { _id: string; username: string; walletAddress: string };
+  creator?:
+    | User
+    | {
+        _id: string;
+        name?: string;
+        username?: string;
+        email?: string;
+        walletAddress?: string;
+        creatorValidation?: User['creatorValidation'];
+      };
   category: string;
   mediaUrl?: string;
   imageUrl?: string;
@@ -73,6 +90,31 @@ export interface Project {
   profileType?: 'individual' | 'organization';
   kycDocuments?: string[];
   tokenRewards?: string;
+  verification?: {
+    profileType?: 'individual' | 'organization';
+    kyc?: {
+      status?: 'not_submitted' | 'pending' | 'verified' | 'rejected';
+      documents?: string[];
+      reviewedAt?: string;
+      notes?: string;
+    };
+    autoReview?: {
+      passed?: boolean;
+      score?: number;
+      reasons?: string[];
+      checkedAt?: string;
+    };
+    manualReview?: {
+      status?: 'pending' | 'approved' | 'rejected';
+      reviewedAt?: string;
+      notes?: string;
+    };
+    timeline?: Array<{
+      stage?: string;
+      at?: string;
+      note?: string;
+    }>;
+  };
   createdAt?: string;
   updatedAt?: string;
 }

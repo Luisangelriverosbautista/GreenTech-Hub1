@@ -90,7 +90,8 @@ const ProjectCreator: React.FC = () => {
     },
     environmentalImpact: {
       metric: '',
-      value: ''
+      value: '',
+      unit: ''
     },
     milestones: [
       {
@@ -314,7 +315,8 @@ const ProjectCreator: React.FC = () => {
         },
         environmentalImpact: {
           metric: formData.environmentalImpact.metric || 'impacto',
-          value: Number.parseFloat(formData.environmentalImpact.value || '0') || 0
+          value: Number.parseFloat(formData.environmentalImpact.value || '0') || 0,
+          unit: formData.environmentalImpact.unit || undefined
         },
         milestones: cleanedMilestones.length > 0 ? cleanedMilestones : [
           {
@@ -546,7 +548,7 @@ const ProjectCreator: React.FC = () => {
           </div>
 
           {/* Impacto Ambiental */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label htmlFor="metric" className="block text-gray-700 font-medium mb-2">
                 Métrica de Impacto
@@ -566,7 +568,7 @@ const ProjectCreator: React.FC = () => {
             </div>
             <div>
               <label htmlFor="value" className="block text-gray-700 font-medium mb-2">
-                Valor
+                Valor Numérico
               </label>
               <input
                 type="text"
@@ -576,6 +578,22 @@ const ProjectCreator: React.FC = () => {
                 inputMode="decimal"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="Ej: 500"
+              />
+            </div>
+            <div>
+              <label htmlFor="impactUnit" className="block text-gray-700 font-medium mb-2">
+                Unidad / ¿En qué se mide?
+              </label>
+              <input
+                type="text"
+                id="impactUnit"
+                value={formData.environmentalImpact.unit}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  environmentalImpact: { ...prev.environmentalImpact, unit: e.target.value }
+                }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Ej: toneladas CO2/año, árboles, litros"
               />
             </div>
           </div>

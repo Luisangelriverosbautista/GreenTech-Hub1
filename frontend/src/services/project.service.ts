@@ -1,5 +1,12 @@
 import api from './api';
+import axios from 'axios';
 import type { Project } from '../types';
+
+export type AdminOverviewResponse = {
+  count: number;
+  projects: Project[];
+  source?: 'admin-overview' | 'fallback-projects-all';
+};
 
 class ProjectService {
   async getProjects(status?: string): Promise<Project[]> {
@@ -49,6 +56,29 @@ class ProjectService {
       }
     });
     return response.data;
+  }
+
+  async getAdminOverview(status?: string): Promise<AdminOverviewResponse> {
+    try {
+      const response = await api.get<{ count: number; projects: Project[] }>('/projects/admin/overview', {
+        params: status ? { status } : undefined,
+      });
+      return {
+        ...response.data,
+        source: 'admin-overview'
+      };
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        const fallback = await this.getProjects('all');
+        return {
+          count: fallback.length,
+          projects: fallback,
+          source: 'fallback-projects-all'
+        };
+      }
+
+      throw error;
+    }
   }
 
   async submitManualReview(

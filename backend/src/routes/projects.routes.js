@@ -110,8 +110,34 @@ router.get('/review-queue/manual', auth, async (req, res) => {
         if (!reviewer) return;
 
         const projects = await Project.find({ status: 'manual_review_pending' })
-            .populate('creator', 'name username email walletAddress')
+            .populate('creator', 'name username email walletAddress creatorValidation createdAt')
             .sort({ updatedAt: 1 });
+
+        res.json({
+            count: projects.length,
+            projects
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Vista de administración con todos los proyectos y datos del creador
+router.get('/admin/overview', auth, async (req, res) => {
+    try {
+        const reviewer = await User.findById(req.user.userId);
+        if (!reviewer || reviewer.role !== 'admin') {
+            return res.status(403).json({ error: 'Se requiere rol admin para esta acción' });
+        }
+
+        const { status } = req.query;
+        const filter = typeof status === 'string' && status.trim().length > 0
+            ? { status: { $regex: new RegExp(`^${status.trim()}$`, 'i') } }
+            : {};
+
+        const projects = await Project.find(filter)
+            .populate('creator', 'name username email walletAddress role creatorValidation createdAt')
+            .sort({ updatedAt: -1 });
 
         res.json({
             count: projects.length,

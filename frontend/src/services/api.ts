@@ -35,6 +35,7 @@ api.interceptors.response.use(
     // Escrow endpoints may return 404 while backend rollout is pending.
     // Keep the rejection behavior, but avoid noisy global logging for this known case.
     const isKnownEscrow404 = status === 404 && requestUrl.includes('/escrows');
+    const isKnownAdminOverview404 = status === 404 && requestUrl.includes('/projects/admin/overview');
 
     // Si el token expiró o es inválido
     if (status === 401) {
@@ -43,7 +44,7 @@ api.interceptors.response.use(
       window.location.href = '/login';
     }
 
-    if (!isKnownEscrow404) {
+    if (!isKnownEscrow404 && !isKnownAdminOverview404) {
       console.error('Response error:', error.response?.data || error.message);
     }
 
