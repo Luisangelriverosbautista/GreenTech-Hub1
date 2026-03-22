@@ -42,7 +42,7 @@ export const Layout = ({ children }: LayoutProps) => {
             </div>
 
             {/* Centro - Navegación */}
-            {isHomeOrPublic && user && (
+            {!showSidebar && isHomeOrPublic && user && (
               <div className="hidden md:flex items-center space-x-6">
                 <Link to="/dashboard" className="text-gray-600 hover:text-green-600 font-medium transition">
                   📊 Dashboard
