@@ -194,7 +194,7 @@ const Projects: React.FC = () => {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
             <div>
               <h1 className="text-4xl font-bold text-green-800 mb-2">
                 Proyectos Ecológicos
@@ -203,12 +203,6 @@ const Projects: React.FC = () => {
                 Descubre y apoya proyectos de impacto ambiental
               </p>
             </div>
-            <button
-              onClick={() => navigate('/create-project')}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold whitespace-nowrap"
-            >
-              + Crear Proyecto
-            </button>
           </div>
         </div>
 
