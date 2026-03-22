@@ -6,8 +6,12 @@ import { useDonations } from '../hooks/useDonations';
 import { ShareProject } from '../components/ShareProject';
 import type { Project } from '../types';
 import projectService from '../services/project.service';
+import { uploadService } from '../services/upload.service';
 import { escrowService, type Escrow, type ProgressUpdate } from '../services/escrow.service';
 import { getAddress, signMessage } from '@stellar/freighter-api';
+
+const ALLOWED_EVIDENCE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_EVIDENCE_FILE_BYTES = 5 * 1024 * 1024;
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +33,9 @@ const ProjectDetail = () => {
   const [progressUpdates, setProgressUpdates] = useState<ProgressUpdate[]>([]);
   const [isProgressLoading, setIsProgressLoading] = useState(false);
   const [progressSubmitting, setProgressSubmitting] = useState(false);
+  const [isUploadingEvidenceFiles, setIsUploadingEvidenceFiles] = useState(false);
+  const [uploadedEvidenceUrls, setUploadedEvidenceUrls] = useState<string[]>([]);
+  const [evidencePreviewUrl, setEvidencePreviewUrl] = useState<string | null>(null);
   const [progressForm, setProgressForm] = useState({
     title: '',
     description: '',
@@ -199,7 +206,15 @@ const ProjectDetail = () => {
     }
   };
 
+  const getEntityId = (value: unknown): string | null => {
+    if (!value || typeof value !== 'object') return null;
+    const maybeRecord = value as Record<string, unknown>;
+    const idValue = maybeRecord._id || maybeRecord.id;
+    return typeof idValue === 'string' ? idValue : null;
+  };
+
   const currentUserId = user?._id || user?.id || null;
+  const projectCreatorId = getEntityId(project?.creator) || project?.creatorId || null;
   const participantEscrow = projectEscrows.find((escrow) => {
     const donorId = escrow.donor?._id || escrow.donor?.id;
     const creatorId = escrow.creator?._id || escrow.creator?.id;
@@ -208,7 +223,12 @@ const ProjectDetail = () => {
   const activeEscrow = participantEscrow || projectEscrows.find(e => ['funded', 'approved', 'partially-released'].includes(e.status)) || projectEscrows[0] || null;
   const activeEscrowDonorId = activeEscrow ? (activeEscrow.donor?._id || activeEscrow.donor?.id) : null;
   const activeEscrowCreatorId = activeEscrow ? (activeEscrow.creator?._id || activeEscrow.creator?.id) : null;
-  const canSubmitProgress = Boolean(activeEscrow && currentUserId && activeEscrowCreatorId && currentUserId === activeEscrowCreatorId);
+  const isProjectCreator = Boolean(currentUserId && projectCreatorId && currentUserId === projectCreatorId);
+  const canSubmitProgress = Boolean(
+    activeEscrow &&
+    currentUserId &&
+    ((activeEscrowCreatorId && currentUserId === activeEscrowCreatorId) || isProjectCreator)
+  );
   const canReviewProgress = Boolean(activeEscrow && currentUserId && activeEscrowDonorId && currentUserId === activeEscrowDonorId);
 
   const loadProgressUpdates = async (escrowId: string) => {
@@ -236,10 +256,12 @@ const ProjectDetail = () => {
       setActionError(null);
       setActionMessage(null);
 
-      const evidenceUrls = progressForm.evidenceCsv
+      const evidenceCsvUrls = progressForm.evidenceCsv
         .split(',')
         .map(v => v.trim())
         .filter(Boolean);
+
+      const evidenceUrls = Array.from(new Set([...uploadedEvidenceUrls, ...evidenceCsvUrls]));
 
       await escrowService.createProgressUpdate(activeEscrow._id, {
         title: progressForm.title.trim(),
@@ -258,6 +280,7 @@ const ProjectDetail = () => {
         milestoneIndex: '0',
         requestedAmount: ''
       });
+      setUploadedEvidenceUrls([]);
 
       setActionMessage('Avance enviado correctamente. Pendiente de aprobación del donante.');
       await loadProgressUpdates(activeEscrow._id);
@@ -272,6 +295,50 @@ const ProjectDetail = () => {
     } finally {
       setProgressSubmitting(false);
     }
+  };
+
+  const handleProgressEvidenceFilesUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    for (const file of files) {
+      if (!ALLOWED_EVIDENCE_TYPES.includes(String(file.type || '').toLowerCase())) {
+        setActionError('Formato de evidencia no permitido. Usa JPG, PNG, WEBP o GIF.');
+        event.target.value = '';
+        return;
+      }
+      if (file.size > MAX_EVIDENCE_FILE_BYTES) {
+        setActionError('Una evidencia supera 5MB. Usa archivos más livianos.');
+        event.target.value = '';
+        return;
+      }
+    }
+
+    try {
+      setIsUploadingEvidenceFiles(true);
+      setActionError(null);
+      const uploadedBatch = await Promise.all(files.map((file) => uploadService.uploadImage(file)));
+      const urls = uploadedBatch.map((item) => item.url).filter(Boolean);
+      setUploadedEvidenceUrls((prev) => Array.from(new Set([...prev, ...urls])));
+    } catch (uploadError) {
+      console.error('Error al subir evidencias:', uploadError);
+      setActionError(uploadError instanceof Error ? uploadError.message : 'No se pudieron subir las evidencias.');
+    } finally {
+      setIsUploadingEvidenceFiles(false);
+      event.target.value = '';
+    }
+  };
+
+  const removeUploadedEvidenceUrl = (urlToRemove: string) => {
+    setUploadedEvidenceUrls((prev) => prev.filter((url) => url !== urlToRemove));
+  };
+
+  const openEvidencePreview = (url: string) => {
+    setEvidencePreviewUrl(url);
+  };
+
+  const closeEvidencePreview = () => {
+    setEvidencePreviewUrl(null);
   };
 
   const handleApproveProgressUpdate = async (updateId: string) => {
@@ -680,13 +747,20 @@ const ProjectDetail = () => {
                 )}
 
                 {/* Progress Updates */}
-                {activeEscrow && (
+                {(activeEscrow || user?.role === 'creator' || user?.role === 'donor') && (
                   <div className="bg-white rounded-lg shadow-lg p-6">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">
                       Avances del Proyecto (Escrow)
                     </h2>
 
-                    {canSubmitProgress && (
+                    {!activeEscrow && (
+                      <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3 mb-4">
+                        Aún no hay un escrow activo para este proyecto. Cuando un donador use "Donar con Escrow",
+                        aquí podrás subir evidencias para solicitar liberación de pagos.
+                      </p>
+                    )}
+
+                    {activeEscrow && canSubmitProgress && (
                       <div className="mb-6 border border-emerald-200 bg-emerald-50 rounded-lg p-4 space-y-3">
                         <p className="text-sm font-semibold text-emerald-800">Enviar nuevo avance</p>
                         <input
@@ -738,9 +812,45 @@ const ProjectDetail = () => {
                           onChange={e => setProgressForm(prev => ({ ...prev, evidenceCsv: e.target.value }))}
                           className="w-full px-3 py-2 border border-gray-300 rounded"
                         />
+                        <div className="border border-gray-200 rounded p-3 bg-white space-y-2">
+                          <p className="text-xs text-gray-700">
+                            También puedes subir imágenes de evidencia (JPG, PNG, WEBP o GIF, máx. 5MB c/u).
+                          </p>
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,image/gif"
+                            multiple
+                            onChange={handleProgressEvidenceFilesUpload}
+                            className="w-full text-sm"
+                          />
+                          {isUploadingEvidenceFiles && (
+                            <p className="text-xs text-blue-700">Subiendo evidencias...</p>
+                          )}
+                          {uploadedEvidenceUrls.length > 0 && (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {uploadedEvidenceUrls.map((url, index) => (
+                                <div key={`${url}-${index}`} className="relative border border-gray-200 rounded p-1 bg-gray-50">
+                                  <img
+                                    src={url}
+                                    alt={`Evidencia subida ${index + 1}`}
+                                    className="w-full h-20 object-cover rounded"
+                                    onClick={() => openEvidencePreview(url)}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeUploadedEvidenceUrl(url)}
+                                    className="absolute top-1 right-1 text-xs bg-white border border-gray-300 rounded px-1 hover:bg-gray-100"
+                                  >
+                                    X
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <button
                           onClick={handleSubmitProgressUpdate}
-                          disabled={!progressForm.title.trim() || !progressForm.description.trim() || progressSubmitting}
+                          disabled={!progressForm.title.trim() || !progressForm.description.trim() || progressSubmitting || isUploadingEvidenceFiles}
                           className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50"
                         >
                           {progressSubmitting ? 'Enviando...' : 'Enviar Avance'}
@@ -775,11 +885,21 @@ const ProjectDetail = () => {
                             </p>
 
                             {Array.isArray(update.evidenceUrls) && update.evidenceUrls.length > 0 && (
-                              <div className="mb-3 space-y-1">
+                              <div className="mb-3 space-y-2">
                                 {update.evidenceUrls.map((url, idx) => (
-                                  <a key={`${update._id}-${idx}`} href={url} target="_blank" rel="noreferrer" className="block text-xs text-blue-700 hover:underline break-all">
-                                    Evidencia {idx + 1}
-                                  </a>
+                                  <div key={`${update._id}-${idx}`} className="space-y-1">
+                                    <img
+                                      src={url}
+                                      alt={`Evidencia ${idx + 1} del avance ${update.title}`}
+                                      className="w-full max-w-xs h-28 object-cover rounded border border-gray-200 bg-gray-100 cursor-zoom-in"
+                                      loading="lazy"
+                                      referrerPolicy="no-referrer"
+                                      onClick={() => openEvidencePreview(url)}
+                                    />
+                                    <a href={url} target="_blank" rel="noreferrer" className="block text-xs text-blue-700 hover:underline break-all">
+                                      Evidencia {idx + 1}
+                                    </a>
+                                  </div>
                                 ))}
                               </div>
                             )}
@@ -1002,6 +1122,30 @@ const ProjectDetail = () => {
           </div>
         </div>
       </div>
+
+      {evidencePreviewUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 p-4 sm:p-8 flex items-center justify-center"
+          onClick={closeEvidencePreview}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={closeEvidencePreview}
+              className="absolute -top-10 right-0 text-white bg-black/40 hover:bg-black/60 rounded px-3 py-1"
+            >
+              Cerrar
+            </button>
+            <img
+              src={evidencePreviewUrl}
+              alt="Vista previa de evidencia"
+              className="w-full max-h-[85vh] object-contain rounded-lg bg-black"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
