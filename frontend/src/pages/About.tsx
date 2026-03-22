@@ -5,28 +5,22 @@ const About = () => {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-2xl font-semibold mb-4">GreenTech Hub</h2>
         <p className="text-gray-700 mb-4">
-          GreenTech Hub es una plataforma innovadora que conecta proyectos ecológicos con inversores comprometidos 
-          con el medio ambiente. Nuestra misión es facilitar la financiación de iniciativas sostenibles 
-          utilizando tecnología blockchain para garantizar transparencia y eficiencia.
+          GreenTech Hub es una plataforma que conecta proyectos ecológicos de creadores validados con donantes de impacto. Facilitamos la financiación de iniciativas sostenibles utilizando tecnología blockchain para asegurar que cada aporte sea una acción verificable.
         </p>
         
         <h3 className="text-xl font-semibold mb-3">Nuestra Misión</h3>
         <p className="text-gray-700 mb-4">
-          Buscamos acelerar la transición hacia un futuro más sostenible facilitando la conexión entre 
-          emprendedores verdes e inversores conscientes del medio ambiente.
-        </p>
+         Acelerar la regeneración del planeta conectando a ONGs y eco-emprendedores con donantes conscientes. Buscamos que los recursos lleguen directamente al territorio, fortaleciendo la economía local y asegurando un impacto ambiental real.
+         </p>
 
         <h3 className="text-xl font-semibold mb-3">Tecnología</h3>
         <p className="text-gray-700 mb-4">
-          Utilizamos la blockchain de Stellar y Soroban para garantizar transacciones seguras y transparentes, 
-          permitiendo un seguimiento claro de las inversiones y su impacto ambiental.
-        </p>
+          Utilizamos la red Stellar y contratos inteligentes (Soroban) bajo un modelo Escrow. Las donaciones no se entregan de golpe, sino que se liberan únicamente al validar hitos operativos, garantizando el rastro exacto de los fondos.
+           </p>
 
         <h3 className="text-xl font-semibold mb-3">Compromiso</h3>
         <p className="text-gray-700">
-          Nos comprometemos a mantener los más altos estándares de transparencia y sostenibilidad, 
-          trabajando continuamente para mejorar nuestra plataforma y maximizar el impacto positivo 
-          en el medio ambiente.
+         Nos comprometemos con la transparencia absoluta. Protegemos el dinero de nuestros usuarios y eliminamos el greenwashing, asegurando que cada proyecto financiado cumpla estrictamente con sus promesas ecológicas.
         </p>
       </div>
     </div>
