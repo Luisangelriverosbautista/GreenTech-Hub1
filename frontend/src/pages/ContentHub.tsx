@@ -321,7 +321,7 @@ const ContentHub = () => {
                     <img
                       src={blog.coverImageUrl}
                       alt={blog.title}
-                      className="w-full h-44 object-cover rounded-md"
+                      className="w-full h-44 object-cover object-center bg-gray-100 rounded-md"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                       }}

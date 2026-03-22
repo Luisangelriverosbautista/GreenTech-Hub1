@@ -134,11 +134,11 @@ function Home() {
                       className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all cursor-pointer transform hover:scale-105"
                     >
                       {/* Image */}
-                      <div className="h-48 bg-gray-200 overflow-hidden">
+                      <div className="h-48 bg-gray-100 overflow-hidden">
                         <img 
                           src={project.imageUrl || DEFAULT_PROJECT_IMAGE}
                           alt={project.title}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover object-center"
                           onError={(e) => {
                             if (e.currentTarget.src !== DEFAULT_PROJECT_IMAGE) {
                               e.currentTarget.src = DEFAULT_PROJECT_IMAGE;

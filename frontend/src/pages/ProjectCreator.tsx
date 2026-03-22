@@ -553,7 +553,7 @@ const ProjectCreator: React.FC = () => {
                 <img
                   src={formData.imageUrl}
                   alt="Vista previa del proyecto"
-                  className="w-full max-h-56 object-cover rounded-md border border-gray-200"
+                  className="w-full max-h-56 object-contain bg-gray-100 rounded-md border border-gray-200"
                 />
               </div>
             )}

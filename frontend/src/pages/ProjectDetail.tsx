@@ -489,11 +489,11 @@ const ProjectDetail = () => {
 
             {/* Hero Image */}
             {project.imageUrl && (
-              <div className="mb-8 rounded-lg overflow-hidden shadow-lg">
+              <div className="mb-8 rounded-lg overflow-hidden shadow-lg bg-gray-100">
                 <img
                   src={project.imageUrl}
                   alt={project.title}
-                  className="w-full h-96 object-cover"
+                  className="w-full h-96 object-cover object-center"
                 />
               </div>
             )}

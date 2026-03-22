@@ -83,11 +83,11 @@ const Projects: React.FC = () => {
     return (
       <div className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full flex flex-col">
         {/* Imagen */}
-        <div className="h-48 bg-gray-200 overflow-hidden">
+        <div className="h-48 bg-gray-100 overflow-hidden">
           <img 
             src={project.imageUrl || DEFAULT_PROJECT_IMAGE}
             alt={project.title}
-            className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+            className="w-full h-full object-cover object-center hover:scale-105 transition-transform cursor-pointer"
             onError={(e) => {
               if (e.currentTarget.src !== DEFAULT_PROJECT_IMAGE) {
                 e.currentTarget.src = DEFAULT_PROJECT_IMAGE;
