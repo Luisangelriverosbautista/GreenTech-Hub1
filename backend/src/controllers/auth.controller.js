@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 exports.register = async (req, res) => {
   try {
     console.log('[REGISTER] Iniciando registro con datos:', { email: req.body.email, role: req.body.role });
-    const { email, password, name, role } = req.body;
+    const { email, password, name, role, creatorValidation } = req.body;
 
     // Validar campos requeridos
     if (!email || !password || !name || !role) {
@@ -35,12 +35,37 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres' });
     }
 
+    let normalizedCreatorValidation = undefined;
+    if (role === 'creator') {
+      const country = String(creatorValidation?.country || '').trim();
+      const governmentId = String(creatorValidation?.governmentId || '').trim();
+      const verificationDocumentUrl = String(creatorValidation?.verificationDocumentUrl || '').trim();
+      const organizationName = String(creatorValidation?.organizationName || '').trim();
+      const website = String(creatorValidation?.website || '').trim();
+
+      if (!country || !governmentId || !verificationDocumentUrl) {
+        return res.status(400).json({
+          message: 'Para rol creador debes proporcionar país, identificación y documento de verificación.'
+        });
+      }
+
+      normalizedCreatorValidation = {
+        country,
+        governmentId,
+        organizationName,
+        website,
+        verificationDocumentUrl,
+        submittedAt: new Date()
+      };
+    }
+
     // Create user
     const user = new User({
       email,
       password,
       name,
-      role
+      role,
+      creatorValidation: normalizedCreatorValidation
     });
 
     await user.save();

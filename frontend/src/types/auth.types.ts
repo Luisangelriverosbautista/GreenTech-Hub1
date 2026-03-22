@@ -3,6 +3,13 @@ export interface RegisterData {
   password: string;
   name: string;
   role: 'donor' | 'creator';
+  creatorValidation?: {
+    country?: string;
+    organizationName?: string;
+    governmentId?: string;
+    website?: string;
+    verificationDocumentUrl?: string;
+  };
 }
 
 export interface AuthResponse {

@@ -82,7 +82,7 @@ const ProjectCreator: React.FC = () => {
     category: 'renewable-energy',
     imageUrl: '',
     profileType: 'individual' as 'individual' | 'organization',
-    kycDocumentsCsv: '',
+    kycDocuments: [] as string[],
     location: {
       lat: '',
       lng: '',
@@ -103,6 +103,7 @@ const ProjectCreator: React.FC = () => {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isUploadingKyc, setIsUploadingKyc] = useState(false);
   const [submitMode, setSubmitMode] = useState<'draft' | 'review'>('draft');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -205,6 +206,36 @@ const ProjectCreator: React.FC = () => {
     }
   };
 
+  const handleKycUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    try {
+      setError(null);
+      setIsUploadingKyc(true);
+      const uploaded = await Promise.all(files.map((file) => uploadService.uploadImage(file)));
+      const urls = uploaded.map((item) => item.url).filter(Boolean);
+
+      setFormData(prev => ({
+        ...prev,
+        kycDocuments: [...prev.kycDocuments, ...urls]
+      }));
+    } catch (err) {
+      const errorMsg = getApiErrorMessage(err);
+      setError(errorMsg || 'No se pudo subir la documentación KYC');
+    } finally {
+      setIsUploadingKyc(false);
+      event.target.value = '';
+    }
+  };
+
+  const removeKycDocument = (urlToDelete: string) => {
+    setFormData(prev => ({
+      ...prev,
+      kycDocuments: prev.kycDocuments.filter((url) => url !== urlToDelete)
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
@@ -219,14 +250,11 @@ const ProjectCreator: React.FC = () => {
       }
 
       const parsedCoordinates = parseCoordinates(formData.location.lat, formData.location.lng);
-      const kycDocuments = formData.kycDocumentsCsv
-        .split(',')
-        .map(v => v.trim())
-        .filter(Boolean);
+      const kycDocuments = formData.kycDocuments.filter(Boolean);
       const cleanedMilestones = sanitizeMilestones(formData.milestones);
 
       if (submitMode === 'review' && kycDocuments.length === 0) {
-        throw new Error('Para enviar a revisión debes cargar al menos un documento KYC (URL).');
+        throw new Error('Para enviar a revisión debes cargar al menos un documento KYC.');
       }
 
       if (submitMode === 'review' && formData.description.trim().length < 80) {
@@ -425,17 +453,39 @@ const ProjectCreator: React.FC = () => {
               </select>
             </div>
             <div>
-              <label htmlFor="kycDocumentsCsv" className="block text-gray-700 font-medium mb-2">
-                Documentos KYC (URLs, separadas por coma)
+              <label htmlFor="kycDocuments" className="block text-gray-700 font-medium mb-2">
+                Documentos KYC (imagen)
               </label>
               <input
-                type="text"
-                id="kycDocumentsCsv"
-                value={formData.kycDocumentsCsv}
-                onChange={(e) => setFormData(prev => ({ ...prev, kycDocumentsCsv: e.target.value }))}
+                type="file"
+                id="kycDocuments"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                multiple
+                onChange={handleKycUpload}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="https://...doc1, https://...doc2"
               />
+              <p className="text-xs text-gray-500 mt-1">Puedes subir uno o varios archivos de evidencia KYC.</p>
+              {isUploadingKyc && (
+                <p className="text-sm text-blue-700 mt-2">Subiendo documentos KYC...</p>
+              )}
+              {formData.kycDocuments.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {formData.kycDocuments.map((docUrl, idx) => (
+                    <div key={`${docUrl}-${idx}`} className="flex items-center justify-between text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1">
+                      <a href={docUrl} target="_blank" rel="noreferrer" className="text-blue-700 truncate mr-2">
+                        Documento KYC {idx + 1}
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => removeKycDocument(docUrl)}
+                        className="text-red-600 font-semibold"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

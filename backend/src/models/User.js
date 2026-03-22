@@ -22,6 +22,31 @@ const userSchema = new mongoose.Schema({
   },
   walletAddress: {
     type: String
+  },
+  creatorValidation: {
+    country: {
+      type: String,
+      default: ''
+    },
+    organizationName: {
+      type: String,
+      default: ''
+    },
+    governmentId: {
+      type: String,
+      default: ''
+    },
+    website: {
+      type: String,
+      default: ''
+    },
+    verificationDocumentUrl: {
+      type: String,
+      default: ''
+    },
+    submittedAt: {
+      type: Date
+    }
   }
 }, {
   timestamps: true

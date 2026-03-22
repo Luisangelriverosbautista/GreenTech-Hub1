@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { validateEmail, validatePassword, validateName } from '../utils/validation';
+import { uploadService } from '../services/upload.service';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -11,14 +12,23 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     name: '',
-    role: 'donor' as 'donor' | 'creator'
+    role: 'donor' as 'donor' | 'creator',
+    creatorValidation: {
+      country: '',
+      organizationName: '',
+      governmentId: '',
+      website: '',
+      verificationDocumentUrl: ''
+    }
   });
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
 
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string[];
     name?: string;
     confirmPassword?: string;
+    creatorValidation?: string;
   }>({});
 
   const validateForm = (): boolean => {
@@ -51,6 +61,13 @@ const Register = () => {
       isValid = false;
     }
 
+    if (formData.role === 'creator') {
+      if (!formData.creatorValidation.country.trim() || !formData.creatorValidation.governmentId.trim() || !formData.creatorValidation.verificationDocumentUrl.trim()) {
+        newErrors.creatorValidation = 'Para creadores debes completar país, identificación y documento de validación.';
+        isValid = false;
+      }
+    }
+
     setErrors(newErrors);
     return isValid;
   };
@@ -76,6 +93,44 @@ const Register = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
     // Limpiar error del campo cuando el usuario empiece a escribir
     setErrors(prev => ({ ...prev, [name]: undefined }));
+  };
+
+  const handleCreatorValidationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      creatorValidation: {
+        ...prev.creatorValidation,
+        [name]: value
+      }
+    }));
+    setErrors(prev => ({ ...prev, creatorValidation: undefined }));
+  };
+
+  const handleCreatorDocumentUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setErrors(prev => ({ ...prev, creatorValidation: undefined }));
+      setIsUploadingDocument(true);
+      const uploaded = await uploadService.uploadImage(file);
+      setFormData(prev => ({
+        ...prev,
+        creatorValidation: {
+          ...prev.creatorValidation,
+          verificationDocumentUrl: uploaded.url
+        }
+      }));
+    } catch {
+      setErrors(prev => ({
+        ...prev,
+        creatorValidation: 'No se pudo subir el documento de validación.'
+      }));
+    } finally {
+      setIsUploadingDocument(false);
+      event.target.value = '';
+    }
   };
 
   return (
@@ -193,6 +248,63 @@ const Register = () => {
                 <option value="creator">Creador de Proyectos</option>
               </select>
             </div>
+
+            {formData.role === 'creator' && (
+              <div className="space-y-4 border border-emerald-200 rounded-md p-4 bg-emerald-50">
+                <p className="text-sm font-semibold text-emerald-900">Validación adicional para creadores</p>
+                <input
+                  type="text"
+                  name="country"
+                  value={formData.creatorValidation.country}
+                  onChange={handleCreatorValidationChange}
+                  placeholder="País"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                  required
+                />
+                <input
+                  type="text"
+                  name="organizationName"
+                  value={formData.creatorValidation.organizationName}
+                  onChange={handleCreatorValidationChange}
+                  placeholder="Organización (opcional para individuos)"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                />
+                <input
+                  type="text"
+                  name="governmentId"
+                  value={formData.creatorValidation.governmentId}
+                  onChange={handleCreatorValidationChange}
+                  placeholder="Identificación oficial / RFC / registro"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                  required
+                />
+                <input
+                  type="url"
+                  name="website"
+                  value={formData.creatorValidation.website}
+                  onChange={handleCreatorValidationChange}
+                  placeholder="Sitio web (opcional)"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                />
+                <div>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={handleCreatorDocumentUpload}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                    required
+                  />
+                  <p className="text-xs text-gray-600 mt-1">Sube comprobante de identidad/registro (imagen).</p>
+                  {isUploadingDocument && <p className="text-sm text-blue-700 mt-1">Subiendo documento...</p>}
+                  {formData.creatorValidation.verificationDocumentUrl && (
+                    <p className="text-xs text-emerald-700 mt-1">Documento cargado correctamente.</p>
+                  )}
+                </div>
+                {errors.creatorValidation && (
+                  <p className="text-sm text-red-600">{errors.creatorValidation}</p>
+                )}
+              </div>
+            )}
 
             <button
               type="submit"
