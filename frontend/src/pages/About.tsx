@@ -15,7 +15,7 @@ const About = () => {
 
         <h3 className="text-xl font-semibold mb-3">Tecnología</h3>
         <p className="text-gray-700 mb-4">
-          Utilizamos la red Stellar y contratos inteligentes (Soroban) bajo un modelo Escrow. Las donaciones no se entregan de golpe, sino que se liberan únicamente al validar hitos operativos, garantizando el rastro exacto de los fondos.
+          Utilizamos la red Stellar y contratos inteligentes bajo un modelo Escrow. Las donaciones no se entregan de golpe, sino que se liberan únicamente al validar hitos operativos, garantizando el rastro exacto de los fondos.
            </p>
 
         <h3 className="text-xl font-semibold mb-3">Compromiso</h3>
