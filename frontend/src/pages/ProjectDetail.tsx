@@ -455,9 +455,21 @@ const ProjectDetail = () => {
 
   const currentAmount = Number.parseFloat(String(project.currentAmount ?? 0)) || 0;
   const targetAmount = Number.parseFloat(String(project.targetAmount ?? 0)) || 0;
-  const progress = targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
-  const isFunded = targetAmount > 0 && currentAmount >= targetAmount;
-  const remainingAmount = Math.max(targetAmount - currentAmount, 0);
+  const escrowsForFunding = projectEscrows.filter((escrow) => escrow.status !== 'failed');
+  const escrowCommittedAmount = escrowsForFunding.reduce((sum, escrow) => {
+    const amount = Number.parseFloat(String(escrow.amountTotal || 0));
+    return sum + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
+  const escrowReleasedAmount = escrowsForFunding.reduce((sum, escrow) => {
+    const amount = Number.parseFloat(String(escrow.amountReleased || 0));
+    return sum + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
+  const directFundingAmount = Math.max(currentAmount - escrowReleasedAmount, 0);
+  const committedAmount = directFundingAmount + escrowCommittedAmount;
+  const availableAmount = currentAmount;
+  const progress = targetAmount > 0 ? (committedAmount / targetAmount) * 100 : 0;
+  const isFunded = targetAmount > 0 && committedAmount >= targetAmount;
+  const remainingAmount = Math.max(targetAmount - committedAmount, 0);
   const milestones = Array.isArray(project.milestones) ? project.milestones : [];
   const completedMilestones = milestones.filter((milestone) => milestone.completed).length;
   const milestonesProgressPercent = milestones.length > 0
@@ -601,9 +613,9 @@ const ProjectDetail = () => {
                   {/* Progress Stats */}
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                     <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
-                      <p className="text-gray-600 text-sm font-medium">Recaudado</p>
+                      <p className="text-gray-600 text-sm font-medium">Comprometido</p>
                       <p className="text-2xl font-bold text-green-600">
-                        {currentAmount.toFixed(2)} XLM
+                        {committedAmount.toFixed(2)} XLM
                       </p>
                     </div>
                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
@@ -613,9 +625,9 @@ const ProjectDetail = () => {
                       </p>
                     </div>
                     <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
-                      <p className="text-gray-600 text-sm font-medium">Progreso</p>
+                      <p className="text-gray-600 text-sm font-medium">Disponible</p>
                       <p className="text-2xl font-bold text-purple-600">
-                        {Math.min(progress, 100).toFixed(1)}%
+                        {availableAmount.toFixed(2)} XLM
                       </p>
                     </div>
                   </div>
@@ -628,7 +640,10 @@ const ProjectDetail = () => {
                     />
                   </div>
                   <p className="mt-3 text-sm text-gray-600">
-                    {isFunded ? 'Meta completada' : `Faltan ${remainingAmount.toFixed(2)} XLM para alcanzar la meta`}
+                    {isFunded ? 'Meta de fondeo comprometida completada.' : `Faltan ${remainingAmount.toFixed(2)} XLM comprometidos para alcanzar la meta`}
+                  </p>
+                  <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    La barra crece con cada donación comprometida en escrow. El creador solo puede usar los fondos ya liberados al cumplir cada hito.
                   </p>
                 </div>
 
