@@ -233,11 +233,11 @@ const AdminDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState<AdminOverviewResponse['source']>('admin-overview');
 
-  const loadOverview = async () => {
+  const loadOverview = async (forceCheck = false) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await projectService.getAdminOverview();
+      const response = await projectService.getAdminOverview({ forceCheck });
       setProjects(response.projects || []);
       setDataSource(response.source);
     } catch (loadError) {
@@ -283,7 +283,7 @@ const AdminDashboard = () => {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={loadOverview}
+              onClick={() => loadOverview(true)}
               disabled={isLoading}
               className="px-4 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
             >
@@ -426,9 +426,25 @@ const AdminDashboard = () => {
                       <div className="border border-gray-200 rounded p-3">
                         <p className="font-semibold text-gray-900 mb-1">Documentos KYC enviados</p>
                         {kycDocuments.length > 0 ? (
-                          <ul className="list-disc pl-4 space-y-1 text-xs">
+                          <ul className="space-y-3 text-xs">
                             {kycDocuments.map((docUrl, index) => (
-                              <li key={`${projectId}-doc-${index}`}>{docUrl}</li>
+                              <li key={`${projectId}-doc-${index}`} className="space-y-2">
+                                <img
+                                  src={docUrl}
+                                  alt={`Documento KYC ${index + 1} de ${project.title}`}
+                                  className="w-full max-w-xs h-40 object-cover rounded border border-gray-200 bg-gray-100"
+                                  loading="lazy"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <a
+                                  href={docUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-blue-700 hover:text-blue-800 underline break-all"
+                                >
+                                  Ver imagen completa
+                                </a>
+                              </li>
                             ))}
                           </ul>
                         ) : (

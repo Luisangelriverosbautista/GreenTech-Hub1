@@ -4,6 +4,9 @@ import { useAuth } from '../hooks/useAuth';
 import { validateEmail, validatePassword, validateName } from '../utils/validation';
 import { uploadService } from '../services/upload.service';
 
+const ALLOWED_KYC_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_KYC_FILE_BYTES = 5 * 1024 * 1024;
+
 const Register = () => {
   const navigate = useNavigate();
   const { register, error: authError } = useAuth();
@@ -111,6 +114,24 @@ const Register = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (!ALLOWED_KYC_TYPES.includes(file.type.toLowerCase())) {
+      setErrors(prev => ({
+        ...prev,
+        creatorValidation: 'Formato no permitido. Usa JPG, PNG, WEBP o GIF.'
+      }));
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > MAX_KYC_FILE_BYTES) {
+      setErrors(prev => ({
+        ...prev,
+        creatorValidation: 'La imagen supera 5MB. Usa un archivo más liviano.'
+      }));
+      event.target.value = '';
+      return;
+    }
+
     try {
       setErrors(prev => ({ ...prev, creatorValidation: undefined }));
       setIsUploadingDocument(true);
@@ -122,10 +143,11 @@ const Register = () => {
           verificationDocumentUrl: uploaded.url
         }
       }));
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo subir el documento de validación.';
       setErrors(prev => ({
         ...prev,
-        creatorValidation: 'No se pudo subir el documento de validación.'
+        creatorValidation: message
       }));
     } finally {
       setIsUploadingDocument(false);
@@ -294,7 +316,7 @@ const Register = () => {
                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
-                  <p className="text-xs text-gray-600 mt-1">Sube comprobante de identidad/registro (imagen).</p>
+                  <p className="text-xs text-gray-600 mt-1">Sube comprobante de identidad/registro (JPG, PNG, WEBP o GIF, máx. 5MB).</p>
                   {isUploadingDocument && <p className="text-sm text-blue-700 mt-1">Subiendo documento...</p>}
                   {formData.creatorValidation.verificationDocumentUrl && (
                     <p className="text-xs text-emerald-700 mt-1">Documento cargado correctamente.</p>
@@ -308,9 +330,10 @@ const Register = () => {
 
             <button
               type="submit"
+              disabled={isUploadingDocument}
               className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
             >
-              Registrarse
+              {isUploadingDocument ? 'Subiendo documento...' : 'Registrarse'}
             </button>
           </div>
         </form>

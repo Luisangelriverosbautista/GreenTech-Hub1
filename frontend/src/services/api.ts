@@ -36,9 +36,13 @@ api.interceptors.response.use(
     // Keep the rejection behavior, but avoid noisy global logging for this known case.
     const isKnownEscrow404 = status === 404 && requestUrl.includes('/escrows');
     const isKnownAdminOverview404 = status === 404 && requestUrl.includes('/projects/admin/overview');
+    const isPublicAuthFlow =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register') ||
+      requestUrl.includes('/uploads/image');
 
     // Si el token expiró o es inválido
-    if (status === 401) {
+    if (status === 401 && !isPublicAuthFlow) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';

@@ -8,6 +8,40 @@ export type AdminOverviewResponse = {
   source?: 'admin-overview' | 'fallback-projects-all';
 };
 
+export type AdminOverviewOptions = {
+  status?: string;
+  forceCheck?: boolean;
+};
+
+const ADMIN_OVERVIEW_UNSUPPORTED_KEY = 'admin_overview_endpoint_unsupported';
+let adminOverviewUnsupportedInMemory = false;
+
+const isAdminOverviewUnsupported = () => {
+  try {
+    return localStorage.getItem(ADMIN_OVERVIEW_UNSUPPORTED_KEY) === '1';
+  } catch {
+    return adminOverviewUnsupportedInMemory;
+  }
+};
+
+const markAdminOverviewUnsupported = () => {
+  adminOverviewUnsupportedInMemory = true;
+  try {
+    localStorage.setItem(ADMIN_OVERVIEW_UNSUPPORTED_KEY, '1');
+  } catch {
+    // Browser privacy mode can block storage; in-memory flag already set.
+  }
+};
+
+const clearAdminOverviewUnsupported = () => {
+  adminOverviewUnsupportedInMemory = false;
+  try {
+    localStorage.removeItem(ADMIN_OVERVIEW_UNSUPPORTED_KEY);
+  } catch {
+    // Ignore storage errors in restricted browser contexts.
+  }
+};
+
 class ProjectService {
   async getProjects(status?: string): Promise<Project[]> {
     try {
@@ -58,17 +92,30 @@ class ProjectService {
     return response.data;
   }
 
-  async getAdminOverview(status?: string): Promise<AdminOverviewResponse> {
+  async getAdminOverview(options: AdminOverviewOptions = {}): Promise<AdminOverviewResponse> {
+    const { status, forceCheck = false } = options;
+
+    if (!forceCheck && isAdminOverviewUnsupported()) {
+      const fallback = await this.getProjects('all');
+      return {
+        count: fallback.length,
+        projects: fallback,
+        source: 'fallback-projects-all'
+      };
+    }
+
     try {
       const response = await api.get<{ count: number; projects: Project[] }>('/projects/admin/overview', {
         params: status ? { status } : undefined,
       });
+      clearAdminOverviewUnsupported();
       return {
         ...response.data,
         source: 'admin-overview'
       };
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
+        markAdminOverviewUnsupported();
         const fallback = await this.getProjects('all');
         return {
           count: fallback.length,

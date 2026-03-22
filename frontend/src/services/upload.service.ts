@@ -1,4 +1,5 @@
 import api from './api';
+import axios from 'axios';
 
 export interface UploadImageResponse {
   message: string;
@@ -12,13 +13,22 @@ class UploadService {
     const formData = new FormData();
     formData.append('image', file);
 
-    const response = await api.post<UploadImageResponse>('/uploads/image', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    try {
+      const response = await api.post<UploadImageResponse>('/uploads/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
 
-    return response.data;
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const backendMessage = (error.response?.data as any)?.error || error.message;
+        throw new Error(backendMessage || 'No se pudo subir la imagen');
+      }
+
+      throw new Error('No se pudo subir la imagen');
+    }
   }
 }
 

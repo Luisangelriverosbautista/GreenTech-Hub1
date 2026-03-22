@@ -1,7 +1,6 @@
 const express = require('express');
 const multer = require('multer');
 const mongoose = require('mongoose');
-const auth = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -28,7 +27,7 @@ function getGridFsBucket() {
   return new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: 'images' });
 }
 
-router.post('/image', auth, (req, res) => {
+router.post('/image', (req, res) => {
   upload.single('image')(req, res, (err) => {
     if (err) {
       res.status(400).json({ error: err.message || 'No se pudo subir la imagen' });
