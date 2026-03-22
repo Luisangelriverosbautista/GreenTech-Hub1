@@ -886,6 +886,7 @@ router.get('/my-transactions', auth, async (req, res) => {
             from: user._id,
             type: 'donation'
         })
+            .populate('to', 'username walletAddress')
             .populate('project', 'title')
             .sort({ createdAt: -1 });
         
