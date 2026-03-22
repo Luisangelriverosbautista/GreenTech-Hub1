@@ -6,6 +6,7 @@ import { uploadService } from '../services/upload.service';
 
 const ALLOWED_KYC_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_KYC_FILE_BYTES = 5 * 1024 * 1024;
+const API_BASE_FOR_DEBUG = import.meta.env.VITE_API_URL || 'https://greentech-hub1-2.onrender.com/api';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -144,7 +145,10 @@ const Register = () => {
         }
       }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo subir el documento de validación.';
+      const rawMessage = error instanceof Error ? error.message : 'No se pudo subir el documento de validación.';
+      const message = rawMessage.includes('backend actual todavía exige sesión')
+        ? `${rawMessage} API actual: ${API_BASE_FOR_DEBUG}`
+        : rawMessage;
       setErrors(prev => ({
         ...prev,
         creatorValidation: message
@@ -314,12 +318,18 @@ const Register = () => {
                     accept="image/png,image/jpeg,image/webp,image/gif"
                     onChange={handleCreatorDocumentUpload}
                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                    required
                   />
                   <p className="text-xs text-gray-600 mt-1">Sube comprobante de identidad/registro (JPG, PNG, WEBP o GIF, máx. 5MB).</p>
                   {isUploadingDocument && <p className="text-sm text-blue-700 mt-1">Subiendo documento...</p>}
                   {formData.creatorValidation.verificationDocumentUrl && (
-                    <p className="text-xs text-emerald-700 mt-1">Documento cargado correctamente.</p>
+                    <div className="mt-2 space-y-2">
+                      <p className="text-xs text-emerald-700">Documento cargado correctamente.</p>
+                      <img
+                        src={formData.creatorValidation.verificationDocumentUrl}
+                        alt="Documento de verificación cargado"
+                        className="w-full max-w-xs h-32 object-cover rounded border border-emerald-200 bg-white"
+                      />
+                    </div>
                   )}
                 </div>
                 {errors.creatorValidation && (

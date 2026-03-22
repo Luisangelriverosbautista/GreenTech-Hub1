@@ -49,6 +49,12 @@ api.interceptors.response.use(
     }
 
     if (!isKnownEscrow404 && !isKnownAdminOverview404) {
+      if (!status) {
+        console.error(
+          `Network/CORS error against API base ${API_URL}. Verifica VITE_API_URL y CORS_ORIGINS en backend.`,
+          error.message
+        );
+      }
       console.error('Response error:', error.response?.data || error.message);
     }
 

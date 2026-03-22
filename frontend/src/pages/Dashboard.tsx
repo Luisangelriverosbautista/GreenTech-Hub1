@@ -15,7 +15,7 @@ const DonorDashboard = () => {
   const { balance, isLoading: balanceLoading } = useWalletBalance();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8">
       {/* Wallet Connection - Prominently displayed */}
       <section className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg shadow-lg p-6 border-2 border-green-200">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">🪙 Conecta tu Wallet Stellar</h2>
@@ -281,7 +281,7 @@ const AdminDashboard = () => {
               Vista completa de la información enviada por creadores para validar calidad y trazabilidad.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={() => loadOverview(true)}
               disabled={isLoading}
@@ -342,14 +342,14 @@ const AdminDashboard = () => {
             {reviewProjects.map((project) => {
               const projectId = project._id || project.id || '';
               return (
-                <div key={`review-${projectId}`} className="border border-gray-200 rounded-lg p-3">
+                <div key={`review-${projectId}`} className="border border-gray-200 rounded-lg p-3 overflow-hidden">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold text-gray-900">{project.title}</p>
+                    <p className="font-semibold text-gray-900 break-words min-w-0">{project.title}</p>
                     <span className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-800">
                       {STATUS_LABELS[String(project.status || '')] || project.status || 'Sin estado'}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-600 mt-1">Creador: {creatorDisplayName(project)}</p>
+                  <p className="text-xs text-gray-600 mt-1 break-words">Creador: {creatorDisplayName(project)}</p>
                   <p className="text-xs text-gray-600">KYC: {project.verification?.kyc?.status || 'N/A'} | Manual: {project.verification?.manualReview?.status || 'N/A'}</p>
                 </div>
               );
@@ -377,11 +377,11 @@ const AdminDashboard = () => {
               const milestones = project.milestones || [];
 
               return (
-                <details key={projectId} className="border border-gray-200 rounded-lg p-4 group">
+                <details key={projectId} className="border border-gray-200 rounded-lg p-4 group overflow-hidden">
                   <summary className="cursor-pointer list-none flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-gray-900">{project.title}</p>
-                      <p className="text-xs text-gray-600">Creador: {creatorDisplayName(project)}</p>
+                      <p className="font-semibold text-gray-900 break-words">{project.title}</p>
+                      <p className="text-xs text-gray-600 break-words">Creador: {creatorDisplayName(project)}</p>
                     </div>
                     <span className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-800 w-fit">
                       {STATUS_LABELS[String(project.status || '')] || project.status || 'Sin estado'}
@@ -390,18 +390,18 @@ const AdminDashboard = () => {
 
                   <div className="mt-4 space-y-4 text-sm text-gray-700">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="bg-gray-50 rounded p-3">Descripción: {project.description}</div>
-                      <div className="bg-gray-50 rounded p-3">Categoría: {project.category || 'N/A'}</div>
-                      <div className="bg-gray-50 rounded p-3">Meta: {project.targetAmount || '0'} XLM</div>
-                      <div className="bg-gray-50 rounded p-3">Wallet proyecto: {project.walletAddress || 'N/A'}</div>
+                      <div className="bg-gray-50 rounded p-3 break-words">Descripción: {project.description}</div>
+                      <div className="bg-gray-50 rounded p-3 break-words">Categoría: {project.category || 'N/A'}</div>
+                      <div className="bg-gray-50 rounded p-3 break-words">Meta: {project.targetAmount || '0'} XLM</div>
+                      <div className="bg-gray-50 rounded p-3 break-all">Wallet proyecto: {project.walletAddress || 'N/A'}</div>
                       <div className="bg-gray-50 rounded p-3">Creado: {toDate(project.createdAt)}</div>
                       <div className="bg-gray-50 rounded p-3">Actualizado: {toDate(project.updatedAt)}</div>
-                      <div className="bg-gray-50 rounded p-3">Impacto ambiental: {project.environmentalImpact?.metric || 'N/A'} {project.environmentalImpact?.value ?? ''} {project.environmentalImpact?.unit || ''}</div>
+                      <div className="bg-gray-50 rounded p-3 break-words">Impacto ambiental: {project.environmentalImpact?.metric || 'N/A'} {project.environmentalImpact?.value ?? ''} {project.environmentalImpact?.unit || ''}</div>
                       <div className="bg-gray-50 rounded p-3">Monto actual: {project.currentAmount || '0'} XLM</div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="border border-emerald-200 bg-emerald-50 rounded p-3">
+                      <div className="border border-emerald-200 bg-emerald-50 rounded p-3 break-words">
                         <p className="font-semibold text-emerald-900">Datos de validación del creador</p>
                         <p>País: {creatorValidation?.country || 'N/A'}</p>
                         <p>Organización: {creatorValidation?.organizationName || 'N/A'}</p>
@@ -410,7 +410,7 @@ const AdminDashboard = () => {
                         <p>Documento de verificación: {creatorValidation?.verificationDocumentUrl || 'N/A'}</p>
                       </div>
 
-                      <div className="border border-blue-200 bg-blue-50 rounded p-3">
+                      <div className="border border-blue-200 bg-blue-50 rounded p-3 break-words">
                         <p className="font-semibold text-blue-900">Revisión del proyecto</p>
                         <p>Perfil KYC: {project.verification?.profileType || 'N/A'}</p>
                         <p>Estado KYC: {project.verification?.kyc?.status || 'N/A'}</p>
@@ -452,7 +452,7 @@ const AdminDashboard = () => {
                         )}
                       </div>
 
-                      <div className="border border-amber-200 bg-amber-50 rounded p-3">
+                      <div className="border border-amber-200 bg-amber-50 rounded p-3 break-words">
                         <p className="font-semibold text-amber-900 mb-1">Observaciones automáticas</p>
                         {autoReasons.length > 0 ? (
                           <ul className="list-disc pl-4 space-y-1 text-xs text-amber-900">
@@ -514,7 +514,7 @@ function Dashboard() {
   if (!user) return null;
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <h1 className="text-2xl font-bold text-gray-900 mb-8">
         {user.role === 'donor'
           ? 'Panel de Donador'

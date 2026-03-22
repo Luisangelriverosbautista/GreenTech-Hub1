@@ -23,6 +23,9 @@ class UploadService {
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401 && !localStorage.getItem('token')) {
+          throw new Error('El backend actual todavía exige sesión para subir imágenes. Debes desplegar el backend más reciente para permitir carga de KYC durante registro.');
+        }
         const backendMessage = (error.response?.data as any)?.error || error.message;
         throw new Error(backendMessage || 'No se pudo subir la imagen');
       }
