@@ -7,11 +7,8 @@ import { ProjectCard } from '../components/ProjectCard';
 import { DonationList } from '../components/DonationList';
 
 const DonorDashboard = () => {
-  const { projects, isLoading: projectsLoading, error: projectsError } = useProjects();
   const { made, totalMade, isLoading: donationsLoading, error: donationsError } = useDonationsByRole();
   const { balance, isLoading: balanceLoading } = useWalletBalance();
-
-  const getProjectId = (project: any): string => project?._id || project?.id || '';
 
   return (
     <div className="space-y-8">
@@ -51,31 +48,6 @@ const DonorDashboard = () => {
           </p>
           <p className="mt-1 text-xs text-gray-500">Por transacción</p>
         </div>
-      </section>
-
-      {/* Recent Projects Section */}
-      <section>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Proyectos Recientes</h2>
-        {projectsLoading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500 mx-auto"></div>
-            <p className="mt-2 text-gray-500">Cargando proyectos...</p>
-          </div>
-        ) : projectsError ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800">
-            <p>No se pudieron cargar los proyectos. {projectsError}</p>
-          </div>
-        ) : projects && projects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.slice(0, 3).map((project, index) => (
-              <ProjectCard key={getProjectId(project) || `project-${index}`} project={project} compact />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-800">
-            <p>No hay proyectos disponibles en este momento.</p>
-          </div>
-        )}
       </section>
 
       {/* My Donations Section (Realizadas) */}
