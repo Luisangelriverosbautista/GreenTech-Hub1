@@ -1,10 +1,12 @@
 import { useState, type FC } from "react";
 import { Dialog } from "@headlessui/react";
 import { Link } from "react-router-dom";
+import { useLanguage } from '../hooks/useLanguage';
 
 const Navbar: FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authType, setAuthType] = useState<"donor" | "creator">("donor");
+  const { t } = useLanguage();
 
   return (
     <>
@@ -20,13 +22,13 @@ const Navbar: FC = () => {
                   to="/projects"
                   className="inline-flex items-center px-1 pt-1 text-gray-700 hover:text-green-600"
                 >
-                  Proyectos
+                  {t('Proyectos', 'Projects')}
                 </Link>
                 <Link
                   to="/create-project"
                   className="inline-flex items-center px-1 pt-1 text-gray-700 hover:text-green-600"
                 >
-                  Crear Proyecto
+                  {t('Crear Proyecto', 'Create Project')}
                 </Link>
               </div>
             </div>
@@ -35,7 +37,7 @@ const Navbar: FC = () => {
                 onClick={() => setIsAuthOpen(true)}
                 className="ml-4 px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
               >
-                Iniciar Sesión
+                {t('Iniciar Sesión', 'Sign In')}
               </button>
             </div>
           </div>
@@ -50,7 +52,7 @@ const Navbar: FC = () => {
         <div className="flex min-h-full items-center justify-center p-4 backdrop-blur-sm bg-black/40">
           <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl">
             <Dialog.Title className="text-2xl font-bold text-center text-gray-900 mb-6">
-              Bienvenido a GreenTech Hub
+              {t('Bienvenido a GreenTech Hub', 'Welcome to GreenTech Hub')}
             </Dialog.Title>
 
             <div className="flex gap-4 mb-8">
@@ -62,7 +64,7 @@ const Navbar: FC = () => {
                     : "flex-1 py-3 px-4 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                 }
               >
-                Donante
+                {t('Donante', 'Donor')}
               </button>
               <button
                 onClick={() => setAuthType("creator")}
@@ -72,14 +74,14 @@ const Navbar: FC = () => {
                     : "flex-1 py-3 px-4 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                 }
               >
-                Creador
+                {t('Creador', 'Creator')}
               </button>
             </div>
 
             <form className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Correo Electrónico
+                  {t('Correo Electrónico', 'Email Address')}
                 </label>
                 <input
                   type="email"
@@ -91,7 +93,7 @@ const Navbar: FC = () => {
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Contraseña
+                  {t('Contraseña', 'Password')}
                 </label>
                 <input
                   type="password"
@@ -105,7 +107,9 @@ const Navbar: FC = () => {
                 type="submit"
                 className="w-full py-3 px-4 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-all"
               >
-                {authType === "donor" ? "Ingresar como Donante" : "Ingresar como Creador"}
+                {authType === "donor"
+                  ? t('Ingresar como Donante', 'Continue as Donor')
+                  : t('Ingresar como Creador', 'Continue as Creator')}
               </button>
             </form>
 
@@ -114,7 +118,7 @@ const Navbar: FC = () => {
                 onClick={() => setIsAuthOpen(false)}
                 className="text-sm text-gray-600 hover:text-gray-900"
               >
-                Cancelar
+                {t('Cancelar', 'Cancel')}
               </button>
             </div>
           </Dialog.Panel>

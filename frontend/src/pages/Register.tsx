@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 import { validateEmail, validatePassword, validateName } from '../utils/validation';
 import { uploadService } from '../services/upload.service';
 
@@ -11,6 +12,7 @@ const API_BASE_FOR_DEBUG = import.meta.env.VITE_API_URL || 'https://greentech-hu
 const Register = () => {
   const navigate = useNavigate();
   const { register, error: authError } = useAuth();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -41,7 +43,7 @@ const Register = () => {
 
     // Validar email
     if (!validateEmail(formData.email)) {
-      newErrors.email = 'Por favor, ingresa un correo electrónico válido';
+      newErrors.email = t('Por favor, ingresa un correo electrónico válido', 'Please enter a valid email address');
       isValid = false;
     }
 
@@ -61,13 +63,13 @@ const Register = () => {
 
     // Validar confirmación de contraseña
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Las contraseñas no coinciden';
+      newErrors.confirmPassword = t('Las contraseñas no coinciden', 'Passwords do not match');
       isValid = false;
     }
 
     if (formData.role === 'creator') {
       if (!formData.creatorValidation.country.trim() || !formData.creatorValidation.governmentId.trim() || !formData.creatorValidation.verificationDocumentUrl.trim()) {
-        newErrors.creatorValidation = 'Para creadores debes completar país, identificación y documento de validación.';
+        newErrors.creatorValidation = t('Para creadores debes completar país, identificación y documento de validación.', 'Creators must complete country, identification, and validation document fields.');
         isValid = false;
       }
     }
@@ -118,7 +120,7 @@ const Register = () => {
     if (!ALLOWED_KYC_TYPES.includes(file.type.toLowerCase())) {
       setErrors(prev => ({
         ...prev,
-        creatorValidation: 'Formato no permitido. Usa JPG, PNG, WEBP o GIF.'
+        creatorValidation: t('Formato no permitido. Usa JPG, PNG, WEBP o GIF.', 'Unsupported format. Use JPG, PNG, WEBP, or GIF.')
       }));
       event.target.value = '';
       return;
@@ -127,7 +129,7 @@ const Register = () => {
     if (file.size > MAX_KYC_FILE_BYTES) {
       setErrors(prev => ({
         ...prev,
-        creatorValidation: 'La imagen supera 5MB. Usa un archivo más liviano.'
+        creatorValidation: t('La imagen supera 5MB. Usa un archivo más liviano.', 'The image exceeds 5MB. Use a smaller file.')
       }));
       event.target.value = '';
       return;
@@ -145,7 +147,7 @@ const Register = () => {
         }
       }));
     } catch (error) {
-      const rawMessage = error instanceof Error ? error.message : 'No se pudo subir el documento de validación.';
+      const rawMessage = error instanceof Error ? error.message : t('No se pudo subir el documento de validación.', 'The validation document could not be uploaded.');
       const message = rawMessage.includes('backend actual todavía exige sesión')
         ? `${rawMessage} API actual: ${API_BASE_FOR_DEBUG}`
         : rawMessage;
@@ -163,7 +165,7 @@ const Register = () => {
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 py-12">
       <div className="container mx-auto px-4 max-w-md">
         <h1 className="text-3xl font-bold text-green-800 text-center mb-8">
-          Registro en GreenTech Hub
+          {t('Registro en GreenTech Hub', 'Sign Up for GreenTech Hub')}
         </h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6">
@@ -176,7 +178,7 @@ const Register = () => {
           <div className="space-y-6">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Nombre Completo
+                {t('Nombre Completo', 'Full Name')}
               </label>
               <input
                 type="text"
@@ -196,7 +198,7 @@ const Register = () => {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Correo Electrónico
+                {t('Correo Electrónico', 'Email Address')}
               </label>
               <input
                 type="email"
@@ -216,7 +218,7 @@ const Register = () => {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Contraseña
+                {t('Contraseña', 'Password')}
               </label>
               <input
                 type="password"
@@ -240,7 +242,7 @@ const Register = () => {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirmar Contraseña
+                {t('Confirmar Contraseña', 'Confirm Password')}
               </label>
               <input
                 type="password"
@@ -260,7 +262,7 @@ const Register = () => {
 
             <div>
               <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                Tipo de Usuario
+                {t('Tipo de Usuario', 'User Type')}
               </label>
               <select
                 id="role"
@@ -270,20 +272,20 @@ const Register = () => {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                 required
               >
-                <option value="donor">Donante</option>
-                <option value="creator">Creador de Proyectos</option>
+                <option value="donor">{t('Donante', 'Donor')}</option>
+                <option value="creator">{t('Creador de Proyectos', 'Project Creator')}</option>
               </select>
             </div>
 
             {formData.role === 'creator' && (
               <div className="space-y-4 border border-emerald-200 rounded-md p-4 bg-emerald-50">
-                <p className="text-sm font-semibold text-emerald-900">Validación adicional para creadores</p>
+                <p className="text-sm font-semibold text-emerald-900">{t('Validación adicional para creadores', 'Additional validation for creators')}</p>
                 <input
                   type="text"
                   name="country"
                   value={formData.creatorValidation.country}
                   onChange={handleCreatorValidationChange}
-                  placeholder="País"
+                  placeholder={t('País', 'Country')}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
@@ -292,7 +294,7 @@ const Register = () => {
                   name="organizationName"
                   value={formData.creatorValidation.organizationName}
                   onChange={handleCreatorValidationChange}
-                  placeholder="Organización (opcional para individuos)"
+                  placeholder={t('Organización (opcional para individuos)', 'Organization (optional for individuals)')}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                 />
                 <input
@@ -300,7 +302,7 @@ const Register = () => {
                   name="governmentId"
                   value={formData.creatorValidation.governmentId}
                   onChange={handleCreatorValidationChange}
-                  placeholder="Identificación oficial / RFC / registro"
+                  placeholder={t('Identificación oficial / RFC / registro', 'Official ID / Tax ID / registration')}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
@@ -309,7 +311,7 @@ const Register = () => {
                   name="website"
                   value={formData.creatorValidation.website}
                   onChange={handleCreatorValidationChange}
-                  placeholder="Sitio web (opcional)"
+                  placeholder={t('Sitio web (opcional)', 'Website (optional)')}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                 />
                 <div>
@@ -319,14 +321,14 @@ const Register = () => {
                     onChange={handleCreatorDocumentUpload}
                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   />
-                  <p className="text-xs text-gray-600 mt-1">Sube comprobante de identidad/registro (JPG, PNG, WEBP o GIF, máx. 5MB).</p>
-                  {isUploadingDocument && <p className="text-sm text-blue-700 mt-1">Subiendo documento...</p>}
+                  <p className="text-xs text-gray-600 mt-1">{t('Sube comprobante de identidad/registro (JPG, PNG, WEBP o GIF, máx. 5MB).', 'Upload proof of identity/registration (JPG, PNG, WEBP, or GIF, max 5MB).')}</p>
+                  {isUploadingDocument && <p className="text-sm text-blue-700 mt-1">{t('Subiendo documento...', 'Uploading document...')}</p>}
                   {formData.creatorValidation.verificationDocumentUrl && (
                     <div className="mt-2 space-y-2">
-                      <p className="text-xs text-emerald-700">Documento cargado correctamente.</p>
+                      <p className="text-xs text-emerald-700">{t('Documento cargado correctamente.', 'Document uploaded successfully.')}</p>
                       <img
                         src={formData.creatorValidation.verificationDocumentUrl}
-                        alt="Documento de verificación cargado"
+                        alt={t('Documento de verificación cargado', 'Uploaded verification document')}
                         className="w-full max-w-xs h-32 object-cover rounded border border-emerald-200 bg-white"
                       />
                     </div>
@@ -343,18 +345,18 @@ const Register = () => {
               disabled={isUploadingDocument}
               className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
             >
-              {isUploadingDocument ? 'Subiendo documento...' : 'Registrarse'}
+              {isUploadingDocument ? t('Subiendo documento...', 'Uploading document...') : t('Registrarse', 'Sign Up')}
             </button>
           </div>
         </form>
 
         <p className="mt-4 text-center text-gray-600">
-          ¿Ya tienes una cuenta?{' '}
+          {t('¿Ya tienes una cuenta?', 'Already have an account?')}{' '}
           <button
             onClick={() => navigate('/login')}
             className="text-green-600 hover:text-green-700"
           >
-            Inicia Sesión
+            {t('Inicia Sesión', 'Sign In')}
           </button>
         </p>
       </div>

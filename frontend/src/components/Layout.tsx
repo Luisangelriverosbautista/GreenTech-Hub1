@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 import { Sidebar } from './Sidebar';
 
 interface LayoutProps {
@@ -9,6 +10,7 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   const { user, logout } = useAuth();
+  const { language, toggleLanguage, t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -48,18 +50,27 @@ export const Layout = ({ children }: LayoutProps) => {
                   📊 Dashboard
                 </Link>
                 <Link to="/projects" className="text-gray-600 hover:text-green-600 font-medium transition">
-                  🌍 Proyectos
+                  🌍 {t('Proyectos', 'Projects')}
                 </Link>
                 <Link to="/wallet" className="text-gray-600 hover:text-green-600 font-medium transition">
                   💰 Wallet
                 </Link>
                 <Link to="/content" className="text-gray-600 hover:text-green-600 font-medium transition">
-                  🎥 Contenido
+                  🎥 {t('Contenido', 'Content')}
                 </Link>
               </div>
             )}
 
             <div className="flex items-center gap-4">
+              <button
+                onClick={toggleLanguage}
+                type="button"
+                className="px-2.5 py-1.5 text-xs font-semibold text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100 transition"
+                title={t('Cambiar idioma', 'Switch language')}
+                aria-label={t('Cambiar idioma', 'Switch language')}
+              >
+                {language === 'es' ? 'ES' : 'EN'}
+              </button>
               {user ? (
                 <>
                   <span className="text-sm text-gray-700">{user.email}</span>
@@ -67,7 +78,7 @@ export const Layout = ({ children }: LayoutProps) => {
                     onClick={logout}
                     className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition"
                   >
-                    Cerrar Sesión
+                    {t('Cerrar Sesión', 'Log Out')}
                   </button>
                 </>
               ) : (
@@ -76,13 +87,13 @@ export const Layout = ({ children }: LayoutProps) => {
                     onClick={() => navigate('/login')}
                     className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition"
                   >
-                    Iniciar Sesión
+                    {t('Iniciar Sesión', 'Sign In')}
                   </button>
                   <button
                     onClick={() => navigate('/register')}
                     className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition"
                   >
-                    Registrarse
+                    {t('Registrarse', 'Sign Up')}
                   </button>
                 </div>
               )}
@@ -111,14 +122,14 @@ export const Layout = ({ children }: LayoutProps) => {
         <div className="w-full px-4 py-6">
           <div className="flex justify-between items-center">
             <p className="text-gray-600 text-sm">
-              © 2025 GreenTech Hub. Todos los derechos reservados.
+              {t('© 2025 GreenTech Hub. Todos los derechos reservados.', '© 2025 GreenTech Hub. All rights reserved.')}
             </p>
             <div className="flex space-x-4">
               <Link to="/about" className="text-sm text-gray-600 hover:text-green-600">
-                Sobre Nosotros
+                {t('Sobre Nosotros', 'About Us')}
               </Link>
               <Link to="/contact" className="text-sm text-gray-600 hover:text-green-600">
-                Contacto
+                {t('Contacto', 'Contact')}
               </Link>
             </div>
           </div>

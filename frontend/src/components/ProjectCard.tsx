@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../hooks/useLanguage';
 import type { Project } from '../types';
 
 interface ProjectCardProps {
@@ -16,6 +17,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   onViewDetails,
   onDonate
 }) => {
+  const { t } = useLanguage();
   const current = typeof project.currentAmount === 'string' 
     ? parseFloat(project.currentAmount) 
     : (project.currentAmount || 0);
@@ -52,7 +54,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         {showProgress && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Recaudado</span>
+              <span className="text-gray-600">{t('Recaudado', 'Raised')}</span>
               <span className="font-medium text-gray-900">
                 {project.currentAmount} / {project.metaAmount} XLM
               </span>
@@ -66,9 +68,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             </div>
             
             <div className="flex justify-between text-xs text-gray-500">
-              <span>{Math.round(progress)}% completado</span>
+              <span>{Math.round(progress)}% {t('completado', 'completed')}</span>
               {project.status === 'active' && (
-                <span>{project.transactions?.length || 0} donaciones</span>
+                <span>{project.transactions?.length || 0} {t('donaciones', 'donations')}</span>
               )}
             </div>
           </div>
@@ -80,14 +82,14 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               onClick={onViewDetails}
               className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
             >
-              Ver Detalles
+              {t('Ver Detalles', 'View Details')}
             </button>
             {project.status === 'active' && (
               <button 
                 onClick={onDonate}
                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
-                Donar
+                {t('Donar', 'Donate')}
               </button>
             )}
           </div>

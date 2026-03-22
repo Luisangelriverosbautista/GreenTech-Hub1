@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useProjects } from '../hooks/useProjects';
+import { useLanguage } from '../hooks/useLanguage';
 
 const DEFAULT_PROJECT_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23d1fae5'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23065f46' font-family='Arial' font-size='22'%3EProyecto%3C/text%3E%3C/svg%3E";
 import { useState, useEffect } from 'react';
@@ -9,6 +10,7 @@ function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { projects } = useProjects();
+  const { t } = useLanguage();
   const [featuredProjects, setFeaturedProjects] = useState<any[]>([]);
 
   useEffect(() => {
@@ -18,11 +20,11 @@ function Home() {
 
   const getCategoryBadge = (category: string) => {
     const categories: { [key: string]: { label: string; emoji: string } } = {
-      'renewable-energy': { label: 'Energía Renovable', emoji: '⚡' },
-      'recycling': { label: 'Reciclaje', emoji: '♻️' },
-      'conservation': { label: 'Conservación', emoji: '🌿' },
-      'sustainable-agriculture': { label: 'Agricultura Sostenible', emoji: '🌾' },
-      'clean-water': { label: 'Agua Limpia', emoji: '💧' }
+      'renewable-energy': { label: t('Energía Renovable', 'Renewable Energy'), emoji: '⚡' },
+      'recycling': { label: t('Reciclaje', 'Recycling'), emoji: '♻️' },
+      'conservation': { label: t('Conservación', 'Conservation'), emoji: '🌿' },
+      'sustainable-agriculture': { label: t('Agricultura Sostenible', 'Sustainable Agriculture'), emoji: '🌾' },
+      'clean-water': { label: t('Agua Limpia', 'Clean Water'), emoji: '💧' }
     };
     return categories[category] || { label: category, emoji: '🌍' };
   };
@@ -39,19 +41,21 @@ function Home() {
         <div className="w-full px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="relative max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-green-50 mb-8">
-              <span className="text-green-600 text-sm font-medium">🌱 Bienvenido a la Revolución Verde</span>
+              <span className="text-green-600 text-sm font-medium">{t('🌱 Bienvenido a la Revolución Verde', '🌱 Welcome to the Green Revolution')}</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6">
               <span className="text-green-600">GreenTech</span>{" "}
               <span className="text-yellow-600">Hub</span>
-              <div className="text-gray-900 mt-4">Comunidad Digital de</div>
-              <div className="text-gray-900">Innovación Sostenible</div>
+              <div className="text-gray-900 mt-4">{t('Comunidad Digital de', 'Digital Community for')}</div>
+              <div className="text-gray-900">{t('Innovación Sostenible', 'Sustainable Innovation')}</div>
             </h1>
 
             <p className="text-gray-600 text-lg sm:text-xl max-w-2xl mx-auto mb-12">
-              Conecta con personas, organizaciones y empresas comprometidas con la sostenibilidad. 
-              Crea contenido educativo, participa en eventos y recibe reconocimiento de impacto digital por tus aportes ambientales.
+              {t(
+                'Conecta con personas, organizaciones y empresas comprometidas con la sostenibilidad. Crea contenido educativo, participa en eventos y recibe reconocimiento de impacto digital por tus aportes ambientales.',
+                'Connect with people, organizations, and companies committed to sustainability. Create educational content, participate in events, and receive digital impact recognition for your environmental contributions.'
+              )}
             </p>
 
             {/* Botones acordes al proyecto */}
@@ -63,21 +67,21 @@ function Home() {
                     className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
                   >
                     <span className="mr-2">📊</span>
-                    Dashboard
+                    {t('Dashboard', 'Dashboard')}
                   </button>
                   <button 
                     onClick={() => navigate('/projects')}
                     className="inline-flex items-center px-6 py-3 border border-green-600 text-base font-medium rounded-md text-green-600 bg-white hover:bg-green-50 transition-colors"
                   >
                     <span className="mr-2">🌍</span>
-                    Ver Proyectos
+                    {t('Ver Proyectos', 'View Projects')}
                   </button>
                   <button 
                     onClick={() => navigate('/wallet')}
                     className="inline-flex items-center px-6 py-3 border border-green-600 text-base font-medium rounded-md text-green-600 bg-white hover:bg-green-50 transition-colors"
                   >
                     <span className="mr-2">💰</span>
-                    Mi Wallet
+                    {t('Mi Wallet', 'My Wallet')}
                   </button>
                 </>
               ) : (
@@ -87,14 +91,14 @@ function Home() {
                     className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
                   >
                     <span className="mr-2">🚀</span>
-                    Comenzar Ahora
+                    {t('Comenzar Ahora', 'Get Started')}
                   </button>
                   <button 
                     onClick={() => navigate('/projects')}
                     className="inline-flex items-center px-6 py-3 border border-green-600 text-base font-medium rounded-md text-green-600 bg-white hover:bg-green-50 transition-colors"
                   >
                     <span className="mr-2">🌍</span>
-                    Explorar Proyectos
+                    {t('Explorar Proyectos', 'Explore Projects')}
                   </button>
                 </>
               )}
@@ -113,10 +117,13 @@ function Home() {
           <div className="max-w-6xl mx-auto">
             <div className="mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-center">
-                🌟 Proyectos Destacados
+                {t('🌟 Proyectos Destacados', '🌟 Featured Projects')}
               </h2>
               <p className="text-gray-600 text-center max-w-2xl mx-auto">
-                Conoce los proyectos más inspiradores de nuestra comunidad que están haciendo un impacto ambiental real
+                {t(
+                  'Conoce los proyectos más inspiradores de nuestra comunidad que están haciendo un impacto ambiental real',
+                  'Discover the most inspiring projects in our community that are creating real environmental impact'
+                )}
               </p>
             </div>
 
@@ -190,7 +197,7 @@ function Home() {
                             {(project.creator?.username || 'A').charAt(0).toUpperCase()}
                           </div>
                           <p className="text-xs text-gray-600">
-                            Por <span className="font-semibold text-gray-900">{project.creator?.username || 'Anónimo'}</span>
+                            {t('Por', 'By')} <span className="font-semibold text-gray-900">{project.creator?.username || t('Anónimo', 'Anonymous')}</span>
                           </p>
                         </div>
                       </div>
@@ -200,12 +207,12 @@ function Home() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-gray-600 mb-4">No hay proyectos disponibles aún</p>
+                <p className="text-gray-600 mb-4">{t('No hay proyectos disponibles aún', 'No projects are available yet')}</p>
                 <button 
                   onClick={() => navigate('/projects')}
                   className="inline-flex items-center px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
                 >
-                  Ver todos los proyectos
+                  {t('Ver todos los proyectos', 'View all projects')}
                 </button>
               </div>
             )}
@@ -217,7 +224,7 @@ function Home() {
                   onClick={() => navigate('/projects')}
                   className="inline-flex items-center px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  Ver Todos los Proyectos →
+                  {t('Ver Todos los Proyectos →', 'View All Projects →')}
                 </button>
               </div>
             )}
@@ -230,7 +237,7 @@ function Home() {
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-12 text-center">
-              ¿Por qué unirse a GreenTech Hub?
+              {t('¿Por qué unirse a GreenTech Hub?', 'Why join GreenTech Hub?')}
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -240,7 +247,7 @@ function Home() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Impacto Global</h3>
                 <p className="text-gray-600">
-                  Participa en proyectos que generan cambios reales en el medio ambiente
+                  {t('Participa en proyectos que generan cambios reales en el medio ambiente', 'Take part in projects that create real change for the environment')}
                 </p>
               </div>
 
@@ -248,9 +255,9 @@ function Home() {
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-3xl">💰</span>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Reconocimiento Digital</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{t('Reconocimiento Digital', 'Digital Recognition')}</h3>
                 <p className="text-gray-600">
-                  Recibe un reconocimiento de impacto digital cuando los proyectos que apoyaste concluyan satisfactoriamente
+                  {t('Recibe un reconocimiento de impacto digital cuando los proyectos que apoyaste concluyan satisfactoriamente', 'Receive digital impact recognition when the projects you supported are completed successfully')}
                 </p>
               </div>
 
@@ -258,9 +265,9 @@ function Home() {
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-3xl">🤝</span>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Comunidad Fuerte</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{t('Comunidad Fuerte', 'Strong Community')}</h3>
                 <p className="text-gray-600">
-                  Conecta con millones de personas comprometidas con la sostenibilidad
+                  {t('Conecta con millones de personas comprometidas con la sostenibilidad', 'Connect with millions of people committed to sustainability')}
                 </p>
               </div>
             </div>

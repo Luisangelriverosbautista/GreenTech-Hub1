@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 import { contentService } from '../services/content.service';
 import { uploadService } from '../services/upload.service';
 import type { BlogPost, CreateBlogPayload, CreateVideoPayload, VideoPost } from '../types/content.types';
@@ -8,6 +9,7 @@ type TabType = 'videos' | 'blogs';
 
 const ContentHub = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('videos');
   const [videos, setVideos] = useState<VideoPost[]>([]);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
@@ -54,7 +56,7 @@ const ContentHub = () => {
       setBlogs(blogData || []);
     } catch (err) {
       console.error('Error loading content:', err);
-      setError('No se pudo cargar el contenido. Intenta nuevamente.');
+      setError(t('No se pudo cargar el contenido. Intenta nuevamente.', 'The content could not be loaded. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -80,10 +82,10 @@ const ContentHub = () => {
         tags: [],
         status: 'published',
       });
-      setSuccess('Video publicado correctamente.');
+      setSuccess(t('Video publicado correctamente.', 'Video published successfully.'));
     } catch (err: any) {
       setSuccess(null);
-      setError(err?.response?.data?.error || 'No se pudo crear el video.');
+      setError(err?.response?.data?.error || t('No se pudo crear el video.', 'The video could not be created.'));
     }
   };
 
@@ -114,12 +116,12 @@ const ContentHub = () => {
       });
       setSuccess(
         created.status === 'published'
-          ? 'Blog publicado correctamente.'
-          : 'Borrador guardado correctamente.'
+          ? t('Blog publicado correctamente.', 'Blog published successfully.')
+          : t('Borrador guardado correctamente.', 'Draft saved successfully.')
       );
     } catch (err: any) {
       setSuccess(null);
-      setError(err?.response?.data?.error || 'No se pudo crear el blog.');
+      setError(err?.response?.data?.error || t('No se pudo crear el blog.', 'The blog could not be created.'));
     }
   };
 
@@ -138,7 +140,7 @@ const ContentHub = () => {
         coverImageUrl: uploaded.url
       }));
     } catch (err: any) {
-      setError(err?.response?.data?.error || 'No se pudo subir la imagen de portada.');
+      setError(err?.response?.data?.error || t('No se pudo subir la imagen de portada.', 'The cover image could not be uploaded.'));
     } finally {
       setIsUploadingCover(false);
       event.target.value = '';
@@ -148,9 +150,9 @@ const ContentHub = () => {
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow">
-        <h1 className="text-2xl font-bold text-gray-900">Contenido de la Comunidad</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('Contenido de la Comunidad', 'Community Content')}</h1>
         <p className="text-gray-600 mt-2">
-          Publica videos por enlace (YouTube/Vimeo) y escribe blogs para compartir avances.
+          {t('Publica videos por enlace (YouTube/Vimeo) y escribe blogs para compartir avances.', 'Publish videos by link (YouTube/Vimeo) and write blogs to share progress updates.')}
         </p>
       </div>
 
@@ -159,13 +161,13 @@ const ContentHub = () => {
           onClick={() => setActiveTab('videos')}
           className={`px-4 py-2 rounded-md ${activeTab === 'videos' ? 'bg-green-600 text-white' : 'bg-white text-gray-700'}`}
         >
-          Videos
+          {t('Videos', 'Videos')}
         </button>
         <button
           onClick={() => setActiveTab('blogs')}
           className={`px-4 py-2 rounded-md ${activeTab === 'blogs' ? 'bg-green-600 text-white' : 'bg-white text-gray-700'}`}
         >
-          Blogs
+          {t('Blogs', 'Blogs')}
         </button>
       </div>
 
@@ -174,18 +176,18 @@ const ContentHub = () => {
 
       {canPublish && activeTab === 'videos' && (
         <form onSubmit={handleCreateVideo} className="bg-white p-6 rounded-lg shadow space-y-4">
-          <h2 className="text-lg font-semibold">Publicar Video</h2>
+          <h2 className="text-lg font-semibold">{t('Publicar Video', 'Publish Video')}</h2>
           <input
             required
             value={videoForm.title}
             onChange={(e) => setVideoForm((prev) => ({ ...prev, title: e.target.value }))}
-            placeholder="Título del video"
+            placeholder={t('Título del video', 'Video title')}
             className="w-full border rounded-md px-3 py-2"
           />
           <textarea
             value={videoForm.description}
             onChange={(e) => setVideoForm((prev) => ({ ...prev, description: e.target.value }))}
-            placeholder="Descripción"
+            placeholder={t('Descripción', 'Description')}
             className="w-full border rounded-md px-3 py-2"
             rows={3}
           />
@@ -193,41 +195,41 @@ const ContentHub = () => {
             required
             value={videoForm.url}
             onChange={(e) => setVideoForm((prev) => ({ ...prev, url: e.target.value }))}
-            placeholder="URL de YouTube o Vimeo"
+            placeholder={t('URL de YouTube o Vimeo', 'YouTube or Vimeo URL')}
             className="w-full border rounded-md px-3 py-2"
           />
           <input
             onChange={(e) => setVideoForm((prev) => ({ ...prev, tags: parseTags(e.target.value) }))}
-            placeholder="Tags separados por coma"
+            placeholder={t('Tags separados por coma', 'Tags separated by commas')}
             className="w-full border rounded-md px-3 py-2"
           />
           <button className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700" type="submit">
-            Guardar Video
+            {t('Guardar Video', 'Save Video')}
           </button>
         </form>
       )}
 
       {canPublish && activeTab === 'blogs' && (
         <form onSubmit={handleCreateBlog} className="bg-white p-6 rounded-lg shadow space-y-4">
-          <h2 className="text-lg font-semibold">Escribir Blog</h2>
+          <h2 className="text-lg font-semibold">{t('Escribir Blog', 'Write Blog')}</h2>
           <input
             required
             value={blogForm.title}
             onChange={(e) => setBlogForm((prev) => ({ ...prev, title: e.target.value }))}
-            placeholder="Título del blog"
+            placeholder={t('Título del blog', 'Blog title')}
             className="w-full border rounded-md px-3 py-2"
           />
           <input
             value={blogForm.excerpt}
             onChange={(e) => setBlogForm((prev) => ({ ...prev, excerpt: e.target.value }))}
-            placeholder="Resumen corto"
+            placeholder={t('Resumen corto', 'Short summary')}
             className="w-full border rounded-md px-3 py-2"
           />
           <textarea
             required
             value={blogForm.content}
             onChange={(e) => setBlogForm((prev) => ({ ...prev, content: e.target.value }))}
-            placeholder="Contenido del blog"
+            placeholder={t('Contenido del blog', 'Blog content')}
             className="w-full border rounded-md px-3 py-2"
             rows={7}
           />
@@ -238,21 +240,21 @@ const ContentHub = () => {
               onChange={handleBlogCoverUpload}
               className="w-full border rounded-md px-3 py-2"
             />
-            <p className="text-xs text-gray-500">Imagen de portada opcional (JPG, PNG, WEBP o GIF, max 5MB).</p>
+            <p className="text-xs text-gray-500">{t('Imagen de portada opcional (JPG, PNG, WEBP o GIF, max 5MB).', 'Optional cover image (JPG, PNG, WEBP, or GIF, max 5MB).')}</p>
             {isUploadingCover && (
-              <p className="text-sm text-blue-700">Subiendo portada...</p>
+              <p className="text-sm text-blue-700">{t('Subiendo portada...', 'Uploading cover...')}</p>
             )}
             {blogForm.coverImageUrl && (
               <img
                 src={blogForm.coverImageUrl}
-                alt="Vista previa portada"
+                alt={t('Vista previa portada', 'Cover preview')}
                 className="w-full h-44 object-cover rounded-md"
               />
             )}
           </div>
           <input
             onChange={(e) => setBlogForm((prev) => ({ ...prev, tags: parseTags(e.target.value) }))}
-            placeholder="Tags separados por coma"
+            placeholder={t('Tags separados por coma', 'Tags separated by commas')}
             className="w-full border rounded-md px-3 py-2"
           />
           <div className="flex gap-3">
@@ -261,14 +263,14 @@ const ContentHub = () => {
               value="draft"
               className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md"
             >
-              Guardar como borrador
+              {t('Guardar como borrador', 'Save as draft')}
             </button>
             <button
               type="submit"
               value="published"
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
             >
-              Publicar Blog
+              {t('Publicar Blog', 'Publish Blog')}
             </button>
           </div>
         </form>
@@ -276,11 +278,11 @@ const ContentHub = () => {
 
       {activeTab === 'videos' && (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-900">Videos Publicados</h2>
+          <h2 className="text-xl font-semibold text-gray-900">{t('Videos Publicados', 'Published Videos')}</h2>
           {isLoading ? (
-            <div className="bg-white p-4 rounded-md">Cargando videos...</div>
+            <div className="bg-white p-4 rounded-md">{t('Cargando videos...', 'Loading videos...')}</div>
           ) : videos.length === 0 ? (
-            <div className="bg-white p-4 rounded-md">Aún no hay videos publicados.</div>
+            <div className="bg-white p-4 rounded-md">{t('Aún no hay videos publicados.', 'There are no published videos yet.')}</div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {videos.map((video, index) => (
@@ -297,7 +299,7 @@ const ContentHub = () => {
                     />
                   </div>
                   <div className="text-xs text-gray-500">
-                    {video.author?.name || video.author?.email || 'Comunidad'}
+                    {video.author?.name || video.author?.email || t('Comunidad', 'Community')}
                   </div>
                 </article>
               ))}
@@ -308,11 +310,11 @@ const ContentHub = () => {
 
       {activeTab === 'blogs' && (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-900">Blogs Publicados</h2>
+          <h2 className="text-xl font-semibold text-gray-900">{t('Blogs Publicados', 'Published Blogs')}</h2>
           {isLoading ? (
-            <div className="bg-white p-4 rounded-md">Cargando blogs...</div>
+            <div className="bg-white p-4 rounded-md">{t('Cargando blogs...', 'Loading blogs...')}</div>
           ) : blogs.length === 0 ? (
-            <div className="bg-white p-4 rounded-md">Aún no hay blogs publicados.</div>
+            <div className="bg-white p-4 rounded-md">{t('Aún no hay blogs publicados.', 'There are no published blogs yet.')}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {blogs.map((blog, index) => (
@@ -331,7 +333,7 @@ const ContentHub = () => {
                   {blog.excerpt && <p className="text-gray-600 text-sm">{blog.excerpt}</p>}
                   <p className="text-sm text-gray-700 line-clamp-4">{blog.content}</p>
                   <div className="text-xs text-gray-500">
-                    {blog.author?.name || blog.author?.email || 'Comunidad'}
+                    {blog.author?.name || blog.author?.email || t('Comunidad', 'Community')}
                   </div>
                 </article>
               ))}

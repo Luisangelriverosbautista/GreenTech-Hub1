@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 import { ShareProject } from '../components/ShareProject';
 import type { Project } from '../types';
 import projectService from '../services/project.service';
@@ -16,6 +17,7 @@ const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { language, t } = useLanguage();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -55,7 +57,7 @@ const ProjectDetail = () => {
       setProject(data);
       setLoadError(null);
     } catch {
-      setLoadError('Error al cargar el proyecto');
+      setLoadError(t('Error al cargar el proyecto', 'Error loading the project'));
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +69,7 @@ const ProjectDetail = () => {
       const response = await escrowService.getProjectEscrows(projectId);
       setProjectEscrows((response.escrows || []) as Escrow[]);
     } catch (escrowLoadError) {
-      console.error('Error al cargar escrows:', escrowLoadError);
+      console.error(t('Error al cargar escrows:', 'Error loading escrows:'), escrowLoadError);
     } finally {
       setIsEscrowsLoading(false);
     }
@@ -83,15 +85,15 @@ const ProjectDetail = () => {
 
       const walletResult = await getAddress();
       if (walletResult.error || !walletResult.address) {
-        throw new Error('No se pudo obtener la dirección de Freighter');
+        throw new Error(t('No se pudo obtener la dirección de Freighter', 'Could not get the Freighter address'));
       }
 
       const consentNonce = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
       const consentMessage = [
         'GreenTech Hub - Autorización de donación escrow',
-        `Proyecto: ${project.title}`,
-        `Monto: ${donationAmount} XLM`,
-        `Donante: ${walletResult.address}`,
+        `${t('Proyecto', 'Project')}: ${project.title}`,
+        `${t('Monto', 'Amount')}: ${donationAmount} XLM`,
+        `${t('Donante', 'Donor')}: ${walletResult.address}`,
         `Nonce: ${consentNonce}`
       ].join('\n');
 
@@ -128,18 +130,18 @@ const ProjectDetail = () => {
       });
 
       setEscrowSuccess(true);
-      setActionMessage('Escrow creado correctamente. Ya puedes aprobar y liberar fondos según el rol.');
+      setActionMessage(t('Escrow creado correctamente. Ya puedes aprobar y liberar fondos según el rol.', 'Escrow created successfully. You can now approve and release funds according to the role.'));
       setDonationAmount('');
       setTimeout(() => setEscrowSuccess(false), 5000);
       await loadProject(id!);
       await loadEscrows(id!);
     } catch (escrowError: unknown) {
-      console.error('Error en la donación con escrow:', escrowError);
+      console.error(t('Error en la donación con escrow:', 'Escrow donation error:'), escrowError);
       if (axios.isAxiosError(escrowError)) {
         const backendMessage = (escrowError.response?.data as any)?.error || (escrowError.response?.data as any)?.details;
-        setActionError(backendMessage || 'Error al procesar la donación con escrow');
+        setActionError(backendMessage || t('Error al procesar la donación con escrow', 'Error processing the escrow donation'));
       } else {
-        setActionError('Error al procesar la donación con escrow');
+        setActionError(t('Error al procesar la donación con escrow', 'Error processing the escrow donation'));
       }
     } finally {
       setIsEscrowDonating(false);
@@ -155,10 +157,10 @@ const ProjectDetail = () => {
       setActionMessage(null);
       await escrowService.approveEscrow(escrowId, 0);
       await loadEscrows(id);
-      setActionMessage('Escrow aprobado. El siguiente paso es liberar fondos.');
+      setActionMessage(t('Escrow aprobado. El siguiente paso es liberar fondos.', 'Escrow approved. The next step is to release funds.'));
     } catch (approveError) {
-      console.error('Error al aprobar escrow:', approveError);
-      setActionError('No se pudo aprobar el escrow');
+      console.error(t('Error al aprobar escrow:', 'Error approving escrow:'), approveError);
+      setActionError(t('No se pudo aprobar el escrow', 'The escrow could not be approved'));
     } finally {
       setEscrowActionInProgressId(null);
     }
@@ -173,10 +175,10 @@ const ProjectDetail = () => {
       setActionMessage(null);
       await escrowService.releaseEscrowFunds(escrowId, 0);
       await Promise.all([loadEscrows(id), loadProject(id)]);
-      setActionMessage('Fondos liberados correctamente y balance del proyecto actualizado.');
+      setActionMessage(t('Fondos liberados correctamente y balance del proyecto actualizado.', 'Funds released successfully and the project balance was updated.'));
     } catch (releaseError) {
-      console.error('Error al liberar escrow:', releaseError);
-      setActionError('No se pudo liberar el escrow');
+      console.error(t('Error al liberar escrow:', 'Error releasing escrow:'), releaseError);
+      setActionError(t('No se pudo liberar el escrow', 'The escrow could not be released'));
     } finally {
       setEscrowActionInProgressId(null);
     }
@@ -217,7 +219,7 @@ const ProjectDetail = () => {
         setProgressUpdates([]);
         return;
       }
-      console.error('Error al cargar avances:', progressError);
+      console.error(t('Error al cargar avances:', 'Error loading progress updates:'), progressError);
       setProgressUpdates([]);
     } finally {
       setIsProgressLoading(false);
@@ -258,15 +260,15 @@ const ProjectDetail = () => {
       });
       setUploadedEvidenceUrls([]);
 
-      setActionMessage('Avance enviado correctamente. Pendiente de aprobación del donante.');
+      setActionMessage(t('Avance enviado correctamente. Pendiente de aprobación del donante.', 'Progress update sent successfully. Pending donor approval.'));
       await loadProgressUpdates(activeEscrow._id);
     } catch (submitError) {
-      console.error('Error al enviar avance:', submitError);
+      console.error(t('Error al enviar avance:', 'Error sending progress update:'), submitError);
       if (axios.isAxiosError(submitError)) {
         const backendMessage = (submitError.response?.data as any)?.error || (submitError.response?.data as any)?.details;
-        setActionError(backendMessage || 'No se pudo enviar el avance');
+        setActionError(backendMessage || t('No se pudo enviar el avance', 'The progress update could not be sent'));
       } else {
-        setActionError('No se pudo enviar el avance');
+        setActionError(t('No se pudo enviar el avance', 'The progress update could not be sent'));
       }
     } finally {
       setProgressSubmitting(false);
@@ -279,12 +281,12 @@ const ProjectDetail = () => {
 
     for (const file of files) {
       if (!ALLOWED_EVIDENCE_TYPES.includes(String(file.type || '').toLowerCase())) {
-        setActionError('Formato de evidencia no permitido. Usa JPG, PNG, WEBP o GIF.');
+        setActionError(t('Formato de evidencia no permitido. Usa JPG, PNG, WEBP o GIF.', 'Unsupported evidence format. Use JPG, PNG, WEBP, or GIF.'));
         event.target.value = '';
         return;
       }
       if (file.size > MAX_EVIDENCE_FILE_BYTES) {
-        setActionError('Una evidencia supera 5MB. Usa archivos más livianos.');
+        setActionError(t('Una evidencia supera 5MB. Usa archivos más livianos.', 'One evidence file exceeds 5MB. Use smaller files.'));
         event.target.value = '';
         return;
       }
@@ -297,8 +299,8 @@ const ProjectDetail = () => {
       const urls = uploadedBatch.map((item) => item.url).filter(Boolean);
       setUploadedEvidenceUrls((prev) => Array.from(new Set([...prev, ...urls])));
     } catch (uploadError) {
-      console.error('Error al subir evidencias:', uploadError);
-      setActionError(uploadError instanceof Error ? uploadError.message : 'No se pudieron subir las evidencias.');
+      console.error(t('Error al subir evidencias:', 'Error uploading evidence:'), uploadError);
+      setActionError(uploadError instanceof Error ? uploadError.message : t('No se pudieron subir las evidencias.', 'The evidence files could not be uploaded.'));
     } finally {
       setIsUploadingEvidenceFiles(false);
       event.target.value = '';
@@ -325,14 +327,14 @@ const ProjectDetail = () => {
       setActionMessage(null);
       await escrowService.approveProgressUpdate(activeEscrow._id, updateId);
       await Promise.all([loadProgressUpdates(activeEscrow._id), loadEscrows(id), loadProject(id)]);
-      setActionMessage('Avance aprobado y fondos liberados para ese hito.');
+      setActionMessage(t('Avance aprobado y fondos liberados para ese hito.', 'Progress update approved and funds released for that milestone.'));
     } catch (approveError) {
-      console.error('Error al aprobar avance:', approveError);
+      console.error(t('Error al aprobar avance:', 'Error approving progress update:'), approveError);
       if (axios.isAxiosError(approveError)) {
         const backendMessage = (approveError.response?.data as any)?.error || (approveError.response?.data as any)?.details;
-        setActionError(backendMessage || 'No se pudo aprobar el avance');
+        setActionError(backendMessage || t('No se pudo aprobar el avance', 'The progress update could not be approved'));
       } else {
-        setActionError('No se pudo aprobar el avance');
+        setActionError(t('No se pudo aprobar el avance', 'The progress update could not be approved'));
       }
     }
   };
@@ -340,21 +342,21 @@ const ProjectDetail = () => {
   const handleRejectProgressUpdate = async (updateId: string) => {
     if (!activeEscrow) return;
 
-    const note = window.prompt('Motivo del rechazo (opcional):', '') || '';
+    const note = window.prompt(t('Motivo del rechazo (opcional):', 'Reason for rejection (optional):'), '') || '';
 
     try {
       setActionError(null);
       setActionMessage(null);
       await escrowService.rejectProgressUpdate(activeEscrow._id, updateId, note);
       await loadProgressUpdates(activeEscrow._id);
-      setActionMessage('Avance rechazado. No se liberaron fondos.');
+      setActionMessage(t('Avance rechazado. No se liberaron fondos.', 'Progress update rejected. No funds were released.'));
     } catch (rejectError) {
-      console.error('Error al rechazar avance:', rejectError);
+      console.error(t('Error al rechazar avance:', 'Error rejecting progress update:'), rejectError);
       if (axios.isAxiosError(rejectError)) {
         const backendMessage = (rejectError.response?.data as any)?.error || (rejectError.response?.data as any)?.details;
-        setActionError(backendMessage || 'No se pudo rechazar el avance');
+        setActionError(backendMessage || t('No se pudo rechazar el avance', 'The progress update could not be rejected'));
       } else {
-        setActionError('No se pudo rechazar el avance');
+        setActionError(t('No se pudo rechazar el avance', 'The progress update could not be rejected'));
       }
     }
   };
@@ -375,35 +377,35 @@ const ProjectDetail = () => {
 
   const getProgressStatusLabel = (status: ProgressUpdate['status']) => {
     const map: Record<ProgressUpdate['status'], string> = {
-      submitted: 'Pendiente de revisión',
-      approved: 'Aprobado',
-      rejected: 'Rechazado',
-      released: 'Liberado'
+      submitted: t('Pendiente de revisión', 'Pending review'),
+      approved: t('Aprobado', 'Approved'),
+      rejected: t('Rechazado', 'Rejected'),
+      released: t('Liberado', 'Released')
     };
     return map[status] || status;
   };
 
   const getEscrowStatusLabel = (status: Escrow['status']) => {
     const labels: Record<Escrow['status'], string> = {
-      draft: 'Borrador',
-      funded: 'Fondeado',
-      approved: 'Aprobado',
-      'partially-released': 'Parcialmente liberado',
-      released: 'Liberado',
-      disputed: 'En disputa',
-      resolved: 'Resuelto',
-      failed: 'Fallido'
+      draft: t('Borrador', 'Draft'),
+      funded: t('Fondeado', 'Funded'),
+      approved: t('Aprobado', 'Approved'),
+      'partially-released': t('Parcialmente liberado', 'Partially released'),
+      released: t('Liberado', 'Released'),
+      disputed: t('En disputa', 'Disputed'),
+      resolved: t('Resuelto', 'Resolved'),
+      failed: t('Fallido', 'Failed')
     };
     return labels[status] || status;
   };
 
   const getCategoryBadge = (category: string) => {
     const categories: { [key: string]: { label: string; emoji: string } } = {
-      'renewable-energy': { label: 'Energía Renovable', emoji: '⚡' },
-      'recycling': { label: 'Reciclaje', emoji: '♻️' },
-      'conservation': { label: 'Conservación', emoji: '🌿' },
-      'sustainable-agriculture': { label: 'Agricultura Sostenible', emoji: '🌾' },
-      'clean-water': { label: 'Agua Limpia', emoji: '💧' }
+      'renewable-energy': { label: t('Energía Renovable', 'Renewable Energy'), emoji: '⚡' },
+      'recycling': { label: t('Reciclaje', 'Recycling'), emoji: '♻️' },
+      'conservation': { label: t('Conservación', 'Conservation'), emoji: '🌿' },
+      'sustainable-agriculture': { label: t('Agricultura Sostenible', 'Sustainable Agriculture'), emoji: '🌾' },
+      'clean-water': { label: t('Agua Limpia', 'Clean Water'), emoji: '💧' }
     };
     return categories[category] || { label: category, emoji: '🌍' };
   };
@@ -411,15 +413,15 @@ const ProjectDetail = () => {
   const getStatusBadge = (status: string) => {
     const statusMap: { [key: string]: { label: string; color: string } } = {
       'draft': { label: 'Borrador', color: 'bg-gray-100 text-gray-800' },
-      'kyc_pending': { label: 'KYC Pendiente', color: 'bg-amber-100 text-amber-800' },
-      'kyc_verified': { label: 'KYC Verificado', color: 'bg-cyan-100 text-cyan-800' },
-      'auto_review_failed': { label: 'Revisión Automática Fallida', color: 'bg-red-100 text-red-800' },
-      'manual_review_pending': { label: 'Curaduría Pendiente', color: 'bg-orange-100 text-orange-800' },
-      'approved_for_funding': { label: 'Aprobado para Fondeo', color: 'bg-emerald-100 text-emerald-800' },
-      'active': { label: 'Activo', color: 'bg-blue-100 text-blue-800' },
-      'funded': { label: 'Financiado', color: 'bg-green-100 text-green-800' },
-      'completed': { label: 'Completado', color: 'bg-purple-100 text-purple-800' },
-      'cancelled': { label: 'Cancelado', color: 'bg-red-100 text-red-800' }
+      'kyc_pending': { label: t('KYC Pendiente', 'KYC Pending'), color: 'bg-amber-100 text-amber-800' },
+      'kyc_verified': { label: t('KYC Verificado', 'KYC Verified'), color: 'bg-cyan-100 text-cyan-800' },
+      'auto_review_failed': { label: t('Revisión Automática Fallida', 'Automatic Review Failed'), color: 'bg-red-100 text-red-800' },
+      'manual_review_pending': { label: t('Curaduría Pendiente', 'Curation Pending'), color: 'bg-orange-100 text-orange-800' },
+      'approved_for_funding': { label: t('Aprobado para Fondeo', 'Approved for Funding'), color: 'bg-emerald-100 text-emerald-800' },
+      'active': { label: t('Activo', 'Active'), color: 'bg-blue-100 text-blue-800' },
+      'funded': { label: t('Financiado', 'Funded'), color: 'bg-green-100 text-green-800' },
+      'completed': { label: t('Completado', 'Completed'), color: 'bg-purple-100 text-purple-800' },
+      'cancelled': { label: t('Cancelado', 'Cancelled'), color: 'bg-red-100 text-red-800' }
     };
     return statusMap[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
   };
@@ -429,7 +431,7 @@ const ProjectDetail = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando proyecto...</p>
+          <p className="text-gray-600">{t('Cargando proyecto...', 'Loading project...')}</p>
         </div>
       </div>
     );
@@ -443,10 +445,10 @@ const ProjectDetail = () => {
             onClick={() => navigate('/projects')}
             className="mb-6 px-4 py-2 text-green-600 hover:text-green-800 flex items-center gap-2"
           >
-            ← Volver a Proyectos
+            {t('← Volver a Proyectos', '← Back to Projects')}
           </button>
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
-            <p className="font-semibold">{loadError || 'Proyecto no encontrado'}</p>
+            <p className="font-semibold">{loadError || t('Proyecto no encontrado', 'Project not found')}</p>
           </div>
         </div>
       </div>
@@ -491,11 +493,11 @@ const ProjectDetail = () => {
   const hasValidDonationAmount = Number.isFinite(parsedDonationAmount) && parsedDonationAmount > 0;
   const donateButtonDisabled = !hasValidDonationAmount || isEscrowDonating || isFunded;
   const donateButtonHelpText = isFunded
-    ? 'Este proyecto ya alcanzó su meta y no acepta más donaciones.'
+    ? t('Este proyecto ya alcanzó su meta y no acepta más donaciones.', 'This project has already reached its goal and is not accepting more donations.')
     : !hasValidDonationAmount
-      ? 'Ingresa una cantidad mayor a 0 para habilitar la donación.'
+      ? t('Ingresa una cantidad mayor a 0 para habilitar la donación.', 'Enter an amount greater than 0 to enable the donation.')
       : isEscrowDonating
-        ? 'Se está procesando tu donación con escrow.'
+        ? t('Se está procesando tu donación con escrow.', 'Your escrow donation is being processed.')
         : '';
   const categoryBadge = getCategoryBadge(project.category);
   const statusBadge = getStatusBadge(effectiveStatus);
@@ -530,7 +532,7 @@ const ProjectDetail = () => {
             {/* Mensajes de éxito */}
             {escrowSuccess && (
               <div className="mb-6 bg-blue-100 border border-blue-400 text-blue-800 px-4 py-3 rounded-lg">
-                <p className="font-semibold">Escrow creado correctamente. Fondos en custodia hasta liberación.</p>
+                <p className="font-semibold">{t('Escrow creado correctamente. Fondos en custodia hasta liberación.', 'Escrow created successfully. Funds remain in custody until release.')}</p>
               </div>
             )}
 
@@ -584,6 +586,7 @@ const ProjectDetail = () => {
                     </div>
                     <div>
                       <p className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Creador del Proyecto</p>
+                      
                       <p className="text-lg font-bold text-gray-900">{creatorName}</p>
                       {typeof project.creator === 'object' && project.creator && 'email' in project.creator && (
                         <p className="text-xs text-gray-600 mt-1">{(project.creator as any).email}</p>
@@ -593,7 +596,7 @@ const ProjectDetail = () => {
                   <div className="text-right">
                     <p className="text-xs text-gray-600">Creado</p>
                     <p className="text-sm font-semibold text-gray-900">
-                      {project.createdAt ? new Date(project.createdAt).toLocaleDateString('es-ES') : 'N/A'}
+                      {project.createdAt ? new Date(project.createdAt).toLocaleDateString(language === 'en' ? 'en-US' : 'es-ES') : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -607,25 +610,26 @@ const ProjectDetail = () => {
                 {/* Funding Progress */}
                 <div className="bg-white rounded-lg shadow-lg p-6">
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                    Estado de Recaudación
+                    {t('Estado de Recaudación', 'Funding Status')}
                   </h2>
 
                   {/* Progress Stats */}
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                     <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
                       <p className="text-gray-600 text-sm font-medium">Comprometido</p>
+                      
                       <p className="text-2xl font-bold text-green-600">
                         {committedAmount.toFixed(2)} XLM
                       </p>
                     </div>
                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
-                      <p className="text-gray-600 text-sm font-medium">Meta</p>
+                      <p className="text-gray-600 text-sm font-medium">{t('Meta', 'Goal')}</p>
                       <p className="text-2xl font-bold text-blue-600">
                         {targetAmount.toFixed(2)} XLM
                       </p>
                     </div>
                     <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
-                      <p className="text-gray-600 text-sm font-medium">Disponible</p>
+                      <p className="text-gray-600 text-sm font-medium">{t('Disponible', 'Available')}</p>
                       <p className="text-2xl font-bold text-purple-600">
                         {availableAmount.toFixed(2)} XLM
                       </p>
@@ -640,17 +644,19 @@ const ProjectDetail = () => {
                     />
                   </div>
                   <p className="mt-3 text-sm text-gray-600">
-                    {isFunded ? 'Meta de fondeo comprometida completada.' : `Faltan ${remainingAmount.toFixed(2)} XLM comprometidos para alcanzar la meta`}
+                    {isFunded
+                      ? t('Meta de fondeo comprometida completada.', 'Committed funding goal completed.')
+                      : t(`Faltan ${remainingAmount.toFixed(2)} XLM comprometidos para alcanzar la meta`, `${remainingAmount.toFixed(2)} committed XLM remaining to reach the goal`)}
                   </p>
                   <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                    La barra crece con cada donación comprometida en escrow. El creador solo puede usar los fondos ya liberados al cumplir cada hito.
+                    {t('La barra crece con cada donación comprometida en escrow. El creador solo puede usar los fondos ya liberados al cumplir cada hito.', 'The bar grows with each donation committed in escrow. The creator can only use the funds that have already been released after each milestone is completed.')}
                   </p>
                 </div>
 
                 {/* Description */}
                 <div className="bg-white rounded-lg shadow-lg p-6">
                   <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    Descripción del Proyecto
+                    {t('Descripción del Proyecto', 'Project Description')}
                   </h2>
                   <p className="text-gray-700 leading-relaxed whitespace-pre-line">
                     {project.description}
@@ -661,7 +667,7 @@ const ProjectDetail = () => {
                 {project.environmentalImpact && (
                   <div className="bg-white rounded-lg shadow-lg p-6">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      Impacto Ambiental
+                      {t('Impacto Ambiental', 'Environmental Impact')}
                     </h2>
                     <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg">
                       <p className="text-gray-600 text-sm font-medium mb-2">
@@ -681,13 +687,13 @@ const ProjectDetail = () => {
                 {project.milestones && project.milestones.length > 0 && (
                   <div className="bg-white rounded-lg shadow-lg p-6">
                     <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                      Hitos del Proyecto
+                      {t('Hitos del Proyecto', 'Project Milestones')}
                     </h2>
                     <div className="mb-5 border border-emerald-200 bg-emerald-50 rounded-lg p-4">
                       <div className="flex items-center justify-between gap-3 mb-2">
-                        <p className="text-sm font-semibold text-emerald-900">Progreso por Fases</p>
+                        <p className="text-sm font-semibold text-emerald-900">{t('Progreso por Fases', 'Phase Progress')}</p>
                         <p className="text-sm font-bold text-emerald-800">
-                          {completedMilestones}/{milestones.length} fases
+                          {completedMilestones}/{milestones.length} {t('fases', 'phases')}
                         </p>
                       </div>
                       <div className="bg-emerald-100 rounded-full h-2.5 overflow-hidden mb-2">
@@ -697,8 +703,8 @@ const ProjectDetail = () => {
                         />
                       </div>
                       <div className="flex items-center justify-between gap-3 text-xs text-emerald-900">
-                        <span>{Math.min(milestonesProgressPercent, 100).toFixed(1)}% completado</span>
-                        <span>{releasedByMilestones.toFixed(2)} XLM en fases completadas</span>
+                        <span>{Math.min(milestonesProgressPercent, 100).toFixed(1)}% {t('completado', 'completed')}</span>
+                        <span>{releasedByMilestones.toFixed(2)} XLM {t('en fases completadas', 'in completed phases')}</span>
                       </div>
                     </div>
                     <div className="space-y-4">
@@ -726,11 +732,11 @@ const ProjectDetail = () => {
                                 {milestone.description}
                               </p>
                               <p className="text-sm text-gray-600 mt-1">
-                                Meta: {milestone.targetAmount} XLM
+                                {t('Meta', 'Goal')}: {milestone.targetAmount} XLM
                               </p>
                               {milestone.completedAt && (
                                 <p className="text-xs text-green-600 mt-1">
-                                  Completado el {new Date(milestone.completedAt).toLocaleDateString('es-ES')}
+                                  {t('Completado el', 'Completed on')} {new Date(milestone.completedAt).toLocaleDateString(language === 'en' ? 'en-US' : 'es-ES')}
                                 </p>
                               )}
                             </div>
@@ -745,28 +751,27 @@ const ProjectDetail = () => {
                 {(activeEscrow || user?.role === 'creator' || user?.role === 'donor') && (
                   <div className="bg-white rounded-lg shadow-lg p-6">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      Avances del Proyecto (Escrow)
+                      {t('Avances del Proyecto (Escrow)', 'Project Progress Updates (Escrow)')}
                     </h2>
 
                     {!activeEscrow && (
                       <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3 mb-4">
-                        Aún no hay un escrow activo para este proyecto. Cuando un donador use "Donar con Escrow",
-                        aquí podrás subir evidencias para solicitar liberación de pagos.
+                        {t('Aún no hay un escrow activo para este proyecto. Cuando un donador use "Donar con Escrow", aquí podrás subir evidencias para solicitar liberación de pagos.', 'There is no active escrow for this project yet. When a donor uses "Donate with Escrow", you will be able to upload evidence here to request payment releases.')}
                       </p>
                     )}
 
                     {activeEscrow && canSubmitProgress && (
                       <div className="mb-6 border border-emerald-200 bg-emerald-50 rounded-lg p-4 space-y-3">
-                        <p className="text-sm font-semibold text-emerald-800">Enviar nuevo avance</p>
+                        <p className="text-sm font-semibold text-emerald-800">{t('Enviar nuevo avance', 'Send new progress update')}</p>
                         <input
                           type="text"
-                          placeholder="Título del avance"
+                          placeholder={t('Título del avance', 'Progress update title')}
                           value={progressForm.title}
                           onChange={e => setProgressForm(prev => ({ ...prev, title: e.target.value }))}
                           className="w-full px-3 py-2 border border-gray-300 rounded"
                         />
                         <textarea
-                          placeholder="Describe qué se avanzó..."
+                          placeholder={t('Describe qué se avanzó...', 'Describe what was accomplished...')}
                           value={progressForm.description}
                           onChange={e => setProgressForm(prev => ({ ...prev, description: e.target.value }))}
                           className="w-full px-3 py-2 border border-gray-300 rounded"
@@ -777,7 +782,7 @@ const ProjectDetail = () => {
                             type="number"
                             min="0"
                             max="100"
-                            placeholder="% avance"
+                            placeholder={t('% avance', '% progress')}
                             value={progressForm.progressPercent}
                             onChange={e => setProgressForm(prev => ({ ...prev, progressPercent: e.target.value }))}
                             className="px-3 py-2 border border-gray-300 rounded"
@@ -785,7 +790,7 @@ const ProjectDetail = () => {
                           <input
                             type="number"
                             min="0"
-                            placeholder="Índice hito"
+                            placeholder={t('Índice hito', 'Milestone index')}
                             value={progressForm.milestoneIndex}
                             onChange={e => setProgressForm(prev => ({ ...prev, milestoneIndex: e.target.value }))}
                             className="px-3 py-2 border border-gray-300 rounded"
@@ -794,7 +799,7 @@ const ProjectDetail = () => {
                             type="number"
                             min="0"
                             step="0.1"
-                            placeholder="Monto solicitado (XLM)"
+                            placeholder={t('Monto solicitado (XLM)', 'Requested amount (XLM)')}
                             value={progressForm.requestedAmount}
                             onChange={e => setProgressForm(prev => ({ ...prev, requestedAmount: e.target.value }))}
                             className="px-3 py-2 border border-gray-300 rounded"
@@ -802,14 +807,14 @@ const ProjectDetail = () => {
                         </div>
                         <input
                           type="text"
-                          placeholder="URLs de evidencia separadas por coma"
+                          placeholder={t('URLs de evidencia separadas por coma', 'Evidence URLs separated by commas')}
                           value={progressForm.evidenceCsv}
                           onChange={e => setProgressForm(prev => ({ ...prev, evidenceCsv: e.target.value }))}
                           className="w-full px-3 py-2 border border-gray-300 rounded"
                         />
                         <div className="border border-gray-200 rounded p-3 bg-white space-y-2">
                           <p className="text-xs text-gray-700">
-                            También puedes subir imágenes de evidencia (JPG, PNG, WEBP o GIF, máx. 5MB c/u).
+                            {t('También puedes subir imágenes de evidencia (JPG, PNG, WEBP o GIF, máx. 5MB c/u).', 'You can also upload evidence images (JPG, PNG, WEBP, or GIF, max. 5MB each).')}
                           </p>
                           <input
                             type="file"
@@ -819,7 +824,7 @@ const ProjectDetail = () => {
                             className="w-full text-sm"
                           />
                           {isUploadingEvidenceFiles && (
-                            <p className="text-xs text-blue-700">Subiendo evidencias...</p>
+                            <p className="text-xs text-blue-700">{t('Subiendo evidencias...', 'Uploading evidence...')}</p>
                           )}
                           {uploadedEvidenceUrls.length > 0 && (
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -849,20 +854,21 @@ const ProjectDetail = () => {
                           className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50"
                         >
                           {progressSubmitting ? 'Enviando...' : 'Enviar Avance'}
+                            {progressSubmitting ? t('Enviando...', 'Sending...') : t('Enviar Avance', 'Send Progress Update')}
                         </button>
                       </div>
                     )}
 
                     {!canSubmitProgress && !canReviewProgress && activeEscrow && (
                       <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 mb-3">
-                        Este panel muestra acciones solo para participantes del escrow. Si eres creador, puedes subir evidencia. Si eres donante, puedes aprobar/rechazar y liberar.
+                        {t('Este panel muestra acciones solo para participantes del escrow. Si eres creador, puedes subir evidencia. Si eres donante, puedes aprobar/rechazar y liberar.', 'This panel shows actions only for escrow participants. If you are the creator, you can upload evidence. If you are the donor, you can approve/reject and release funds.')}
                       </p>
                     )}
 
                     {isProgressLoading ? (
-                      <p className="text-sm text-gray-600">Cargando avances...</p>
+                      <p className="text-sm text-gray-600">{t('Cargando avances...', 'Loading progress updates...')}</p>
                     ) : progressUpdates.length === 0 ? (
-                      <p className="text-sm text-gray-600">No hay avances registrados para este escrow.</p>
+                      <p className="text-sm text-gray-600">{t('No hay avances registrados para este escrow.', 'There are no progress updates recorded for this escrow.')}</p>
                     ) : (
                       <div className="space-y-3">
                         {progressUpdates.map(update => (
@@ -875,8 +881,8 @@ const ProjectDetail = () => {
                             </div>
                             <p className="text-sm text-gray-700 mb-2">{update.description}</p>
                             <p className="text-xs text-gray-600 mb-2">
-                              Hito #{update.milestoneIndex} · Avance {update.progressPercent}%
-                              {update.requestedAmount ? ` · Solicita ${update.requestedAmount} XLM` : ''}
+                              {t('Hito', 'Milestone')} #{update.milestoneIndex} · {t('Avance', 'Progress')} {update.progressPercent}%
+                              {update.requestedAmount ? ` · ${t('Solicita', 'Requests')} ${update.requestedAmount} XLM` : ''}
                             </p>
 
                             {Array.isArray(update.evidenceUrls) && update.evidenceUrls.length > 0 && (
@@ -892,7 +898,7 @@ const ProjectDetail = () => {
                                       onClick={() => openEvidencePreview(url)}
                                     />
                                     <a href={url} target="_blank" rel="noreferrer" className="block text-xs text-blue-700 hover:underline break-all">
-                                      Evidencia {idx + 1}
+                                      {t('Evidencia', 'Evidence')} {idx + 1}
                                     </a>
                                   </div>
                                 ))}
@@ -905,13 +911,13 @@ const ProjectDetail = () => {
                                   onClick={() => handleApproveProgressUpdate(update._id)}
                                   className="px-3 py-2 text-sm font-semibold rounded bg-green-100 text-green-800 hover:bg-green-200"
                                 >
-                                  Aprobar y Liberar
+                                  {t('Aprobar y Liberar', 'Approve and Release')}
                                 </button>
                                 <button
                                   onClick={() => handleRejectProgressUpdate(update._id)}
                                   className="px-3 py-2 text-sm font-semibold rounded bg-red-100 text-red-800 hover:bg-red-200"
                                 >
-                                  Rechazar
+                                  {t('Rechazar', 'Reject')}
                                 </button>
                               </div>
                             )}
@@ -938,13 +944,13 @@ const ProjectDetail = () => {
                 {user?.role === 'donor' && isFundableStatus && (
                   <div className="bg-white rounded-lg shadow-lg p-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-4">
-                      Realizar Donación
+                      {t('Realizar Donación', 'Make a Donation')}
                     </h3>
 
                     {project.tokenRewards && (
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                         <p className="text-sm text-blue-900">
-                          <span className="font-semibold">Reconocimiento:</span> al concluir el proyecto se otorgara un reconocimiento de impacto digital a quienes apoyaron su financiamiento.
+                          <span className="font-semibold">{t('Reconocimiento:', 'Recognition:')}</span> {t('al concluir el proyecto se otorgara un reconocimiento de impacto digital a quienes apoyaron su financiamiento.', 'when the project is completed, a digital impact recognition will be granted to those who supported its funding.')}
                         </p>
                       </div>
                     )}
@@ -954,7 +960,7 @@ const ProjectDetail = () => {
                         type="number"
                         value={donationAmount}
                         onChange={e => setDonationAmount(e.target.value)}
-                        placeholder="Cantidad a donar (XLM)"
+                        placeholder={t('Cantidad a donar (XLM)', 'Amount to donate (XLM)')}
                         min="0.1"
                         step="0.1"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -965,7 +971,7 @@ const ProjectDetail = () => {
                         title={donateButtonHelpText}
                         className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isEscrowDonating ? 'Creando escrow...' : 'Donar con Escrow'}
+                        {isEscrowDonating ? t('Creando escrow...', 'Creating escrow...') : t('Donar con Escrow', 'Donate with Escrow')}
                       </button>
                       {donateButtonHelpText && (
                         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
@@ -976,7 +982,7 @@ const ProjectDetail = () => {
 
                     <div className="bg-gray-50 rounded-lg p-4">
                       <p className="text-xs text-gray-600">
-                        <span className="font-semibold">Dirección Wallet:</span>
+                        <span className="font-semibold">{t('Dirección Wallet:', 'Wallet Address:')}</span>
                       </p>
                       <p className="text-xs text-gray-900 font-mono break-all mt-2">
                         {project.walletAddress}
@@ -988,11 +994,11 @@ const ProjectDetail = () => {
                 {/* Project Info Card */}
                 <div className="bg-white rounded-lg shadow-lg p-6 mt-8">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">
-                    Información del Proyecto
+                    {t('Información del Proyecto', 'Project Information')}
                   </h3>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs font-semibold text-gray-600 uppercase">Creador</p>
+                      <p className="text-xs font-semibold text-gray-600 uppercase">{t('Creador', 'Creator')}</p>
                       <p className="text-sm text-gray-900 font-semibold">{creatorName}</p>
                       {typeof project.creator === 'object' && project.creator && 'email' in project.creator && (
                         <p className="text-xs text-gray-600">{(project.creator as any).email}</p>
@@ -1000,19 +1006,19 @@ const ProjectDetail = () => {
                     </div>
                     {project.walletAddress && (
                       <div>
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Wallet del Proyecto</p>
+                        <p className="text-xs font-semibold text-gray-600 uppercase">{t('Wallet del Proyecto', 'Project Wallet')}</p>
                         <p className="text-xs text-gray-900 font-mono break-all">{project.walletAddress}</p>
                       </div>
                     )}
                     {project.profileType && (
                       <div>
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Tipo de Creador</p>
-                        <p className="text-sm text-gray-900">{project.profileType === 'organization' ? 'Organización' : 'Persona / Individuo'}</p>
+                        <p className="text-xs font-semibold text-gray-600 uppercase">{t('Tipo de Creador', 'Creator Type')}</p>
+                        <p className="text-sm text-gray-900">{project.profileType === 'organization' ? t('Organización', 'Organization') : t('Persona / Individuo', 'Person / Individual')}</p>
                       </div>
                     )}
                     {(project.location?.address || (project.location?.lat !== undefined && project.location?.lng !== undefined)) && (
                       <div>
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Ubicación declarada</p>
+                        <p className="text-xs font-semibold text-gray-600 uppercase">{t('Ubicación declarada', 'Declared Location')}</p>
                         {project.location?.address && (
                           <p className="text-sm text-gray-900">{project.location.address}</p>
                         )}
@@ -1024,23 +1030,23 @@ const ProjectDetail = () => {
                       </div>
                     )}
                     <div className="border-t pt-3">
-                      <p className="text-xs font-semibold text-gray-600 uppercase">Estado</p>
+                      <p className="text-xs font-semibold text-gray-600 uppercase">{t('Estado', 'Status')}</p>
                       <p className="text-sm text-gray-900">{statusBadge.label}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-gray-600 uppercase">Categoría</p>
+                      <p className="text-xs font-semibold text-gray-600 uppercase">{t('Categoría', 'Category')}</p>
                       <p className="text-sm text-gray-900">{categoryBadge.label}</p>
                     </div>
                     {project.createdAt && (
                       <div>
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Creado</p>
+                        <p className="text-xs font-semibold text-gray-600 uppercase">{t('Creado', 'Created')}</p>
                         <p className="text-sm text-gray-900">
-                          {new Date(project.createdAt).toLocaleDateString('es-ES')}
+                          {new Date(project.createdAt).toLocaleDateString(language === 'en' ? 'en-US' : 'es-ES')}
                         </p>
                       </div>
                     )}
                     <div className="border-t pt-3">
-                      <p className="text-xs font-semibold text-gray-600 uppercase">ID del Proyecto</p>
+                      <p className="text-xs font-semibold text-gray-600 uppercase">{t('ID del Proyecto', 'Project ID')}</p>
                       <p className="text-xs text-gray-900 font-mono break-all bg-gray-100 p-2 rounded">
                         {project._id || project.id}
                       </p>
@@ -1051,13 +1057,13 @@ const ProjectDetail = () => {
                 {/* Escrow Status Card */}
                 <div className="bg-white rounded-lg shadow-lg p-6 mt-8">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">
-                    Escrows del Proyecto
+                    {t('Escrows del Proyecto', 'Project Escrows')}
                   </h3>
 
                   {isEscrowsLoading ? (
-                    <p className="text-sm text-gray-600">Cargando escrows...</p>
+                    <p className="text-sm text-gray-600">{t('Cargando escrows...', 'Loading escrows...')}</p>
                   ) : projectEscrows.length === 0 ? (
-                    <p className="text-sm text-gray-600">Aún no hay escrows para este proyecto.</p>
+                    <p className="text-sm text-gray-600">{t('Aún no hay escrows para este proyecto.', 'There are no escrows for this project yet.')}</p>
                   ) : (
                     <div className="space-y-3">
                       {projectEscrows.slice(0, 5).map((escrow) => {
@@ -1074,14 +1080,14 @@ const ProjectDetail = () => {
                                 {getEscrowStatusLabel(escrow.status)}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {new Date(escrow.createdAt).toLocaleDateString('es-ES')}
+                                {new Date(escrow.createdAt).toLocaleDateString(language === 'en' ? 'en-US' : 'es-ES')}
                               </p>
                             </div>
                             <p className="text-sm text-gray-800">
-                              Total: <span className="font-semibold">{escrow.amountTotal} XLM</span>
+                              {t('Total', 'Total')}: <span className="font-semibold">{escrow.amountTotal} XLM</span>
                             </p>
                             <p className="text-sm text-gray-800 mb-3">
-                              Liberado: <span className="font-semibold">{escrow.amountReleased} XLM</span>
+                              {t('Liberado', 'Released')}: <span className="font-semibold">{escrow.amountReleased} XLM</span>
                             </p>
 
                             <div className="flex gap-2">
@@ -1091,7 +1097,7 @@ const ProjectDetail = () => {
                                   disabled={escrowActionInProgressId === escrow._id}
                                   className="flex-1 px-3 py-2 text-sm font-semibold rounded bg-amber-100 text-amber-800 hover:bg-amber-200 disabled:opacity-50"
                                 >
-                                  Aprobar
+                                  {t('Aprobar', 'Approve')}
                                 </button>
                               )}
 
@@ -1101,7 +1107,7 @@ const ProjectDetail = () => {
                                   disabled={escrowActionInProgressId === escrow._id}
                                   className="flex-1 px-3 py-2 text-sm font-semibold rounded bg-blue-100 text-blue-800 hover:bg-blue-200 disabled:opacity-50"
                                 >
-                                  Liberar Fondos
+                                  {t('Liberar Fondos', 'Release Funds')}
                                 </button>
                               )}
                             </div>
@@ -1130,11 +1136,11 @@ const ProjectDetail = () => {
               onClick={closeEvidencePreview}
               className="absolute -top-10 right-0 text-white bg-black/40 hover:bg-black/60 rounded px-3 py-1"
             >
-              Cerrar
+              {t('Cerrar', 'Close')}
             </button>
             <img
               src={evidencePreviewUrl}
-              alt="Vista previa de evidencia"
+              alt={t('Vista previa de evidencia', 'Evidence preview')}
               className="w-full max-h-[85vh] object-contain rounded-lg bg-black"
             />
           </div>

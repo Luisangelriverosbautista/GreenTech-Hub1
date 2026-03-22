@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface Donation {
   _id: string;
@@ -35,6 +36,7 @@ export const DonationList: React.FC<DonationListProps> = ({
   compact = false,
   type = 'made'
 }) => {
+  const { language, t } = useLanguage();
   const statusColors = {
     pending: 'bg-yellow-100 text-yellow-800',
     confirmed: 'bg-green-100 text-green-800',
@@ -61,7 +63,7 @@ export const DonationList: React.FC<DonationListProps> = ({
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('es-ES', {
+    return new Date(dateString).toLocaleDateString(language === 'en' ? 'en-US' : 'es-ES', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -75,7 +77,9 @@ export const DonationList: React.FC<DonationListProps> = ({
   if (!donations || donations.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        {type === 'made' ? 'No has realizado donaciones' : 'No has recibido donaciones'}
+        {type === 'made'
+          ? t('No has realizado donaciones', 'You have not made any donations')
+          : t('No has recibido donaciones', 'You have not received any donations')}
       </div>
     );
   }
@@ -88,24 +92,24 @@ export const DonationList: React.FC<DonationListProps> = ({
         <thead className="bg-gray-50">
           <tr>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {type === 'made' ? 'Para' : 'De'}
+              {type === 'made' ? t('Para', 'To') : t('De', 'From')}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Proyecto
+              {t('Proyecto', 'Project')}
             </th>
             {!compact && (
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Hash
+                {t('Hash', 'Hash')}
               </th>
             )}
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Cantidad
+              {t('Cantidad', 'Amount')}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Fecha
+              {t('Fecha', 'Date')}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Estado
+              {t('Estado', 'Status')}
             </th>
           </tr>
         </thead>
@@ -127,7 +131,7 @@ export const DonationList: React.FC<DonationListProps> = ({
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {donation.project?.title || 'Proyecto eliminado'}
+                  {donation.project?.title || t('Proyecto eliminado', 'Deleted project')}
                 </span>
               </td>
               {!compact && (
@@ -147,10 +151,10 @@ export const DonationList: React.FC<DonationListProps> = ({
                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
                   statusColors[donation.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
                 }`}>
-                  {donation.status === 'pending' && 'Pendiente'}
-                  {donation.status === 'confirmed' && 'Confirmada'}
-                  {donation.status === 'completed' && 'Completada'}
-                  {donation.status === 'failed' && 'Fallida'}
+                  {donation.status === 'pending' && t('Pendiente', 'Pending')}
+                  {donation.status === 'confirmed' && t('Confirmada', 'Confirmed')}
+                  {donation.status === 'completed' && t('Completada', 'Completed')}
+                  {donation.status === 'failed' && t('Fallida', 'Failed')}
                   {!['pending', 'confirmed', 'completed', 'failed'].includes(donation.status) && donation.status}
                 </span>
               </td>

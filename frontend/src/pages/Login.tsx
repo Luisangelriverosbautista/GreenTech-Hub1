@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, error, user } = useAuth();
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
@@ -42,7 +44,7 @@ const Login = () => {
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 py-12">
       <div className="container mx-auto px-4 max-w-md">
         <h1 className="text-3xl font-bold text-green-800 text-center mb-8">
-          Iniciar Sesión
+          {t('Iniciar Sesión', 'Sign In')}
         </h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6">
@@ -55,7 +57,7 @@ const Login = () => {
           <div className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Correo Electrónico
+                {t('Correo Electrónico', 'Email Address')}
               </label>
               <input
                 type="email"
@@ -70,7 +72,7 @@ const Login = () => {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Contraseña
+                {t('Contraseña', 'Password')}
               </label>
               <div className="relative mt-1">
                 <input
@@ -86,9 +88,9 @@ const Login = () => {
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute inset-y-0 right-0 px-3 text-sm text-green-700 hover:text-green-800"
-                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-label={showPassword ? t('Ocultar contraseña', 'Hide password') : t('Mostrar contraseña', 'Show password')}
                 >
-                  {showPassword ? 'Ocultar' : 'Mostrar'}
+                  {showPassword ? t('Ocultar', 'Hide') : t('Mostrar', 'Show')}
                 </button>
               </div>
             </div>
@@ -101,22 +103,22 @@ const Login = () => {
               {isLoading ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin h-5 w-5 mr-2 border-t-2 border-b-2 border-white rounded-full"></div>
-                  Iniciando sesión...
+                  {t('Iniciando sesión...', 'Signing in...')}
                 </div>
               ) : (
-                'Iniciar Sesión'
+                t('Iniciar Sesión', 'Sign In')
               )}
             </button>
           </div>
         </form>
 
         <p className="mt-4 text-center text-gray-600">
-          ¿No tienes una cuenta?{' '}
+          {t('¿No tienes una cuenta?', "Don't have an account?")}{' '}
           <button
             onClick={() => navigate('/register')}
             className="text-green-600 hover:text-green-700"
           >
-            Regístrate
+            {t('Regístrate', 'Sign up')}
           </button>
         </p>
       </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../hooks/useLanguage';
 import type { Project } from '../types';
 
 interface DonateModalProps {
@@ -14,6 +15,7 @@ export const DonateModal: React.FC<DonateModalProps> = ({
   onClose,
   onDonate
 }) => {
+  const { t } = useLanguage();
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export const DonateModal: React.FC<DonateModalProps> = ({
       await onDonate(Number(amount));
       onClose();
     } catch (err) {
-      setError('Error al procesar la donación. Por favor, intente nuevamente.');
+      setError(t('Error al procesar la donación. Por favor, intente nuevamente.', 'Error processing the donation. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -40,7 +42,7 @@ export const DonateModal: React.FC<DonateModalProps> = ({
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-lg font-semibold text-gray-900">
-            Donar a {project.title}
+            {t('Donar a', 'Donate to')} {project.title}
           </h3>
           <button
             onClick={onClose}
@@ -54,17 +56,17 @@ export const DonateModal: React.FC<DonateModalProps> = ({
 
         <div className="mb-4">
           <p className="text-sm text-gray-600">
-            Meta: {project.metaAmount} XLM
+            {t('Meta', 'Goal')}: {project.metaAmount} XLM
           </p>
           <p className="text-sm text-gray-600">
-            Recaudado: {project.currentAmount} XLM
+            {t('Recaudado', 'Raised')}: {project.currentAmount} XLM
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-              Cantidad (XLM)
+              {t('Cantidad (XLM)', 'Amount (XLM)')}
             </label>
             <input
               type="number"
@@ -92,14 +94,14 @@ export const DonateModal: React.FC<DonateModalProps> = ({
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
               disabled={isLoading}
             >
-              Cancelar
+              {t('Cancelar', 'Cancel')}
             </button>
             <button
               type="submit"
               className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50"
               disabled={isLoading || !amount}
             >
-              {isLoading ? 'Procesando...' : 'Donar'}
+              {isLoading ? t('Procesando...', 'Processing...') : t('Donar', 'Donate')}
             </button>
           </div>
         </form>

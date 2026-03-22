@@ -880,22 +880,25 @@ router.get('/my-transactions', auth, async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
+
+        const madeTypes = ['donation', 'escrow_fund'];
+        const receivedTypes = ['donation', 'escrow_release'];
         
-        // Donaciones hechas
+        // A donor commitment can be recorded either as a direct donation or as escrow funding.
         const donationsMade = await Transaction.find({
             from: user._id,
-            type: 'donation'
+            type: { $in: madeTypes }
         })
             .populate('to', 'username walletAddress')
             .populate('project', 'title')
             .sort({ createdAt: -1 });
         
-        // Donaciones recibidas
+        // A creator effectively receives funds once they are released from escrow.
         const donationsReceived = await Transaction.find({
             to: user._id,
-            type: 'donation'
+            type: { $in: receivedTypes }
         })
-            .populate('from', 'username')
+            .populate('from', 'username walletAddress')
             .populate('project', 'title')
             .sort({ createdAt: -1 });
         

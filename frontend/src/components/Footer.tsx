@@ -1,4 +1,8 @@
+import { useLanguage } from '../hooks/useLanguage';
+
 function Footer() {
+  const { t } = useLanguage();
+
   return (
     <footer className="bg-gray-50 border-t border-gray-200">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -8,7 +12,7 @@ function Footer() {
             <span className="text-yellow-600 font-bold">Hub</span>
           </div>
           <div className="mt-4 md:mt-0 text-sm text-gray-500">
-            © 2024 GreenTech Hub. Todos los derechos reservados.
+            {t('© 2024 GreenTech Hub. Todos los derechos reservados.', '© 2024 GreenTech Hub. All rights reserved.')}
           </div>
         </div>
       </div>

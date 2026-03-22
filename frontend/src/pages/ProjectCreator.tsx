@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
 import { useProjects } from '../hooks/useProjects';
+import { useLanguage } from '../hooks/useLanguage';
 import { projectService } from '../services/project.service';
 import { uploadService } from '../services/upload.service';
 
@@ -74,6 +75,7 @@ const ProjectCreator: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { createProject } = useProjects();
+  const { t } = useLanguage();
   
   const [formData, setFormData] = useState({
     title: '',
@@ -115,15 +117,15 @@ const ProjectCreator: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 flex items-center justify-center py-12">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Wallet No Conectada</h2>
+          <h2 className="text-2xl font-bold text-red-600 mb-4">{t('Wallet No Conectada', 'Wallet Not Connected')}</h2>
           <p className="text-gray-700 mb-6">
-            Debes conectar tu wallet de Freighter antes de crear un proyecto.
+            {t('Debes conectar tu wallet de Freighter antes de crear un proyecto.', 'You must connect your Freighter wallet before creating a project.')}
           </p>
           <button
             onClick={() => navigate('/dashboard')}
             className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors"
           >
-            Ir al Dashboard
+            {t('Ir al Dashboard', 'Go to Dashboard')}
           </button>
         </div>
       </div>
@@ -329,9 +331,9 @@ const ProjectCreator: React.FC = () => {
 
       if (submitMode === 'review') {
         await projectService.submitProjectForReview(newProject._id || newProject.id || '');
-        setSuccessMessage('Proyecto enviado a revisión. Pasará por KYC, análisis automático y curaduría manual antes de habilitar donaciones.');
+        setSuccessMessage(t('Proyecto enviado a revisión. Pasará por KYC, análisis automático y curaduría manual antes de habilitar donaciones.', 'Project submitted for review. It will go through KYC, automatic analysis, and manual curation before donations are enabled.'));
       } else {
-        setSuccessMessage('Proyecto guardado como borrador. Completa KYC y envíalo a revisión cuando estés listo.');
+        setSuccessMessage(t('Proyecto guardado como borrador. Completa KYC y envíalo a revisión cuando estés listo.', 'Project saved as a draft. Complete KYC and submit it for review when you are ready.'));
       }
 
       setSuccess(true);
@@ -357,9 +359,9 @@ const ProjectCreator: React.FC = () => {
           <div className="mb-4">
             <div className="text-5xl">✅</div>
           </div>
-          <h2 className="text-2xl font-bold text-green-600 mb-4">¡Proyecto Creado!</h2>
+          <h2 className="text-2xl font-bold text-green-600 mb-4">{t('¡Proyecto Creado!', 'Project Created!')}</h2>
           <p className="text-gray-700 mb-6">{successMessage}</p>
-          <p className="text-sm text-gray-500">Redirigiendo...</p>
+          <p className="text-sm text-gray-500">{t('Redirigiendo...', 'Redirecting...')}</p>
         </div>
       </div>
     );
@@ -369,15 +371,15 @@ const ProjectCreator: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 py-12">
       <div className="container mx-auto px-4 max-w-2xl">
         <h1 className="text-3xl font-bold text-green-800 mb-2">
-          Crear Nuevo Proyecto
+          {t('Crear Nuevo Proyecto', 'Create New Project')}
         </h1>
         <p className="text-gray-600 mb-8">
-          Tu wallet: <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{user.walletAddress.slice(0, 10)}...{user.walletAddress.slice(-10)}</span>
+          {t('Tu wallet:', 'Your wallet:')} <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{user.walletAddress.slice(0, 10)}...{user.walletAddress.slice(-10)}</span>
         </p>
         
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            <p className="font-bold">Error</p>
+            <p className="font-bold">{t('Error', 'Error')}</p>
             <p>{error}</p>
           </div>
         )}
@@ -386,7 +388,7 @@ const ProjectCreator: React.FC = () => {
           {/* Título */}
           <div className="mb-6">
             <label htmlFor="title" className="block text-gray-700 font-medium mb-2">
-              Nombre del Proyecto *
+              {t('Nombre del Proyecto *', 'Project Name *')}
             </label>
             <input
               type="text"
@@ -395,7 +397,7 @@ const ProjectCreator: React.FC = () => {
               value={formData.title}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Ej: Energía Solar Comunitaria"
+              placeholder={t('Ej: Energía Solar Comunitaria', 'Ex: Community Solar Energy')}
               required
             />
           </div>
@@ -403,7 +405,7 @@ const ProjectCreator: React.FC = () => {
           {/* Descripción */}
           <div className="mb-6">
             <label htmlFor="description" className="block text-gray-700 font-medium mb-2">
-              Descripción *
+              {t('Descripción *', 'Description *')}
             </label>
             <textarea
               id="description"
@@ -412,7 +414,7 @@ const ProjectCreator: React.FC = () => {
               onChange={handleInputChange}
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Describe tu proyecto en detalle..."
+              placeholder={t('Describe tu proyecto en detalle...', 'Describe your project in detail...')}
               required
             ></textarea>
           </div>
@@ -420,7 +422,7 @@ const ProjectCreator: React.FC = () => {
           {/* Categoría */}
           <div className="mb-6">
             <label htmlFor="category" className="block text-gray-700 font-medium mb-2">
-              Categoría
+              {t('Categoría', 'Category')}
             </label>
             <select
               id="category"
@@ -429,11 +431,11 @@ const ProjectCreator: React.FC = () => {
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="renewable-energy">Energía Renovable</option>
-              <option value="recycling">Reciclaje</option>
-              <option value="conservation">Conservación</option>
-              <option value="sustainable-agriculture">Agricultura Sostenible</option>
-              <option value="clean-water">Agua Limpia</option>
+              <option value="renewable-energy">{t('Energía Renovable', 'Renewable Energy')}</option>
+              <option value="recycling">{t('Reciclaje', 'Recycling')}</option>
+              <option value="conservation">{t('Conservación', 'Conservation')}</option>
+              <option value="sustainable-agriculture">{t('Agricultura Sostenible', 'Sustainable Agriculture')}</option>
+              <option value="clean-water">{t('Agua Limpia', 'Clean Water')}</option>
             </select>
           </div>
 
@@ -441,7 +443,7 @@ const ProjectCreator: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label htmlFor="profileType" className="block text-gray-700 font-medium mb-2">
-                Tipo de Creador
+                {t('Tipo de Creador', 'Creator Type')}
               </label>
               <select
                 id="profileType"
@@ -450,13 +452,13 @@ const ProjectCreator: React.FC = () => {
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="individual">Persona / Individuo</option>
-                <option value="organization">Organización</option>
+                <option value="individual">{t('Persona / Individuo', 'Person / Individual')}</option>
+                <option value="organization">{t('Organización', 'Organization')}</option>
               </select>
             </div>
             <div>
               <label htmlFor="kycDocuments" className="block text-gray-700 font-medium mb-2">
-                Documentos KYC (imagen)
+                {t('Documentos KYC (imagen)', 'KYC Documents (image)')}
               </label>
               <input
                 type="file"
@@ -466,23 +468,23 @@ const ProjectCreator: React.FC = () => {
                 onChange={handleKycUpload}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               />
-              <p className="text-xs text-gray-500 mt-1">Puedes subir uno o varios archivos de evidencia KYC.</p>
+              <p className="text-xs text-gray-500 mt-1">{t('Puedes subir uno o varios archivos de evidencia KYC.', 'You can upload one or more KYC evidence files.')}</p>
               {isUploadingKyc && (
-                <p className="text-sm text-blue-700 mt-2">Subiendo documentos KYC...</p>
+                <p className="text-sm text-blue-700 mt-2">{t('Subiendo documentos KYC...', 'Uploading KYC documents...')}</p>
               )}
               {formData.kycDocuments.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {formData.kycDocuments.map((docUrl, idx) => (
                     <div key={`${docUrl}-${idx}`} className="flex items-center justify-between text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1">
                       <a href={docUrl} target="_blank" rel="noreferrer" className="text-blue-700 truncate mr-2">
-                        Documento KYC {idx + 1}
+                        {t('Documento KYC', 'KYC Document')} {idx + 1}
                       </a>
                       <button
                         type="button"
                         onClick={() => removeKycDocument(docUrl)}
                         className="text-red-600 font-semibold"
                       >
-                        Quitar
+                        {t('Quitar', 'Remove')}
                       </button>
                     </div>
                   ))}
@@ -495,34 +497,36 @@ const ProjectCreator: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label className="block text-gray-700 font-medium mb-2">Latitud</label>
+              
               <input
                 type="number"
                 step="0.000001"
                 value={formData.location.lat}
                 onChange={(e) => setFormData(prev => ({ ...prev, location: { ...prev.location, lat: e.target.value } }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Ej: 19.427302"
+                placeholder={t('Ej: 19.427302', 'Ex: 19.427302')}
               />
             </div>
             <div>
               <label className="block text-gray-700 font-medium mb-2">Longitud</label>
+              
               <input
                 type="number"
                 step="0.000001"
                 value={formData.location.lng}
                 onChange={(e) => setFormData(prev => ({ ...prev, location: { ...prev.location, lng: e.target.value } }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Ej: -99.174806"
+                placeholder={t('Ej: -99.174806', 'Ex: -99.174806')}
               />
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-2">Dirección (opcional)</label>
+              <label className="block text-gray-700 font-medium mb-2">{t('Dirección (opcional)', 'Address (optional)')}</label>
               <input
                 type="text"
                 value={formData.location.address}
                 onChange={(e) => setFormData(prev => ({ ...prev, location: { ...prev.location, address: e.target.value } }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Colonia, ciudad o referencia"
+                placeholder={t('Colonia, ciudad o referencia', 'Neighborhood, city, or reference')}
               />
             </div>
           </div>
@@ -530,7 +534,7 @@ const ProjectCreator: React.FC = () => {
           {/* Meta de Financiamiento */}
           <div className="mb-6">
             <label htmlFor="targetAmount" className="block text-gray-700 font-medium mb-2">
-              Meta de Financiamiento (XLM) *
+              {t('Meta de Financiamiento (XLM) *', 'Funding Goal (XLM) *')}
             </label>
             <input
               type="number"
@@ -541,17 +545,17 @@ const ProjectCreator: React.FC = () => {
               step="0.01"
               min="0"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Ej: 100"
+              placeholder={t('Ej: 100', 'Ex: 100')}
               required
             />
-            <p className="text-sm text-gray-500 mt-1">Cantidad en XLM que necesitas recaudar</p>
+            <p className="text-sm text-gray-500 mt-1">{t('Cantidad en XLM que necesitas recaudar', 'Amount in XLM that you need to raise')}</p>
           </div>
 
           {/* Impacto Ambiental */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label htmlFor="metric" className="block text-gray-700 font-medium mb-2">
-                Métrica de Impacto
+                {t('Métrica de Impacto', 'Impact Metric')}
               </label>
               <input
                 type="text"
@@ -563,12 +567,12 @@ const ProjectCreator: React.FC = () => {
                   environmentalImpact: { ...prev.environmentalImpact, metric: e.target.value }
                 }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Ej: CO2 reducido"
+                placeholder={t('Ej: CO2 reducido', 'Ex: CO2 reduced')}
               />
             </div>
             <div>
               <label htmlFor="value" className="block text-gray-700 font-medium mb-2">
-                Valor Numérico
+                {t('Valor Numérico', 'Numeric Value')}
               </label>
               <input
                 type="text"
@@ -577,12 +581,12 @@ const ProjectCreator: React.FC = () => {
                 onChange={(e) => handleImpactValueChange(e.target.value)}
                 inputMode="decimal"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Ej: 500"
+                placeholder={t('Ej: 500', 'Ex: 500')}
               />
             </div>
             <div>
               <label htmlFor="impactUnit" className="block text-gray-700 font-medium mb-2">
-                Unidad / ¿En qué se mide?
+                {t('Unidad / ¿En qué se mide?', 'Unit / How is it measured?')}
               </label>
               <input
                 type="text"
@@ -593,7 +597,7 @@ const ProjectCreator: React.FC = () => {
                   environmentalImpact: { ...prev.environmentalImpact, unit: e.target.value }
                 }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Ej: toneladas CO2/año, árboles, litros"
+                placeholder={t('Ej: toneladas CO2/año, árboles, litros', 'Ex: tons of CO2/year, trees, liters')}
               />
             </div>
           </div>
@@ -601,7 +605,7 @@ const ProjectCreator: React.FC = () => {
           {/* Imagen del Proyecto */}
           <div className="mb-6">
             <label htmlFor="projectImage" className="block text-gray-700 font-medium mb-2">
-              Imagen del Proyecto
+              {t('Imagen del Proyecto', 'Project Image')}
             </label>
             <input
               type="file"
@@ -611,16 +615,16 @@ const ProjectCreator: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Sube JPG, PNG, WEBP o GIF (max 5MB).
+              {t('Sube JPG, PNG, WEBP o GIF (max 5MB).', 'Upload JPG, PNG, WEBP, or GIF (max 5MB).')}
             </p>
             {isUploadingImage && (
-              <p className="text-sm text-blue-700 mt-2">Subiendo imagen...</p>
+              <p className="text-sm text-blue-700 mt-2">{t('Subiendo imagen...', 'Uploading image...')}</p>
             )}
             {formData.imageUrl && (
               <div className="mt-3">
                 <img
                   src={formData.imageUrl}
-                  alt="Vista previa del proyecto"
+                  alt={t('Vista previa del proyecto', 'Project preview')}
                   className="w-full max-h-56 object-contain bg-gray-100 rounded-md border border-gray-200"
                 />
               </div>
@@ -632,8 +636,9 @@ const ProjectCreator: React.FC = () => {
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
                 <h3 className="text-base font-bold text-emerald-900">Fases / Hitos del Proyecto</h3>
+                
                 <p className="text-sm text-emerald-800">
-                  Esto se mostrará al donante para darle claridad de ejecución y confianza.
+                  {t('Esto se mostrará al donante para darle claridad de ejecución y confianza.', 'This will be shown to the donor to provide execution clarity and trust.')}
                 </p>
               </div>
               <button
@@ -641,7 +646,7 @@ const ProjectCreator: React.FC = () => {
                 onClick={addMilestone}
                 className="px-3 py-2 text-sm font-semibold bg-emerald-700 text-white rounded-md hover:bg-emerald-800"
               >
-                + Agregar Fase
+                {t('+ Agregar Fase', '+ Add Phase')}
               </button>
             </div>
 
@@ -654,7 +659,7 @@ const ProjectCreator: React.FC = () => {
                       value={milestone.description}
                       onChange={(e) => updateMilestone(index, 'description', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder={`Fase ${index + 1}: Ej. Compra e instalación de paneles`}
+                      placeholder={t(`Fase ${index + 1}: Ej. Compra e instalación de paneles`, `Phase ${index + 1}: Ex. Purchase and installation of panels`)}
                     />
                   </div>
                   <div className="md:col-span-3">
@@ -665,7 +670,7 @@ const ProjectCreator: React.FC = () => {
                       value={milestone.targetAmount}
                       onChange={(e) => updateMilestone(index, 'targetAmount', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="Monto XLM"
+                      placeholder={t('Monto XLM', 'Amount XLM')}
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -675,7 +680,7 @@ const ProjectCreator: React.FC = () => {
                       disabled={formData.milestones.length <= 1}
                       className="w-full px-3 py-2 text-sm font-semibold rounded-md bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-40"
                     >
-                      Quitar
+                      {t('Quitar', 'Remove')}
                     </button>
                   </div>
                 </div>
@@ -691,7 +696,7 @@ const ProjectCreator: React.FC = () => {
               disabled={isSubmitting}
               className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400"
             >
-              {isSubmitting && submitMode === 'draft' ? 'Guardando...' : 'Guardar Borrador'}
+              {isSubmitting && submitMode === 'draft' ? t('Guardando...', 'Saving...') : t('Guardar Borrador', 'Save Draft')}
             </button>
             <button 
               type="submit"
@@ -699,14 +704,14 @@ const ProjectCreator: React.FC = () => {
               disabled={isSubmitting}
               className="flex-1 bg-emerald-700 text-white py-2 px-4 rounded-md hover:bg-emerald-800 transition-colors disabled:bg-gray-400"
             >
-              {isSubmitting && submitMode === 'review' ? 'Enviando...' : 'Enviar a Revisión'}
+              {isSubmitting && submitMode === 'review' ? t('Enviando...', 'Sending...') : t('Enviar a Revisión', 'Submit for Review')}
             </button>
             <button 
               type="button"
               onClick={() => navigate('/projects')}
               className="bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
             >
-              Cancelar
+              {t('Cancelar', 'Cancel')}
             </button>
           </div>
         </form>

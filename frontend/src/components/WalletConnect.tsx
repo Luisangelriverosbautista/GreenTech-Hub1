@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 
 /**
  * Componente WalletConnect
@@ -9,6 +10,7 @@ import { useAuth } from '../hooks/useAuth';
  */
 export const WalletConnect: React.FC = () => {
   const auth = useAuth();
+  const { t } = useLanguage();
   const [localError, setLocalError] = useState<string | null>(null);
   const [localSuccess, setLocalSuccess] = useState<string | null>(null);
 
@@ -20,13 +22,13 @@ export const WalletConnect: React.FC = () => {
       // Call connectFreighter from context - bind the function to maintain context
       if (auth.connectFreighter) {
         await auth.connectFreighter();
-        setLocalSuccess('✓ Wallet conectada exitosamente');
+        setLocalSuccess(t('✓ Wallet conectada exitosamente', '✓ Wallet connected successfully'));
         setTimeout(() => setLocalSuccess(null), 3000);
       } else {
-        throw new Error('connectFreighter no está disponible');
+        throw new Error(t('connectFreighter no está disponible', 'connectFreighter is not available'));
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al conectar Freighter';
+      const msg = err instanceof Error ? err.message : t('Error al conectar Freighter', 'Error connecting Freighter');
       setLocalError(msg);
     }
   };
@@ -34,7 +36,7 @@ export const WalletConnect: React.FC = () => {
   const copyToClipboard = () => {
     const address = auth.user?.walletAddress || '';
     navigator.clipboard.writeText(address);
-    setLocalSuccess('Dirección copiada al portapapeles');
+    setLocalSuccess(t('Dirección copiada al portapapeles', 'Address copied to clipboard'));
     setTimeout(() => setLocalSuccess(null), 2000);
   };
 
@@ -44,11 +46,11 @@ export const WalletConnect: React.FC = () => {
       const unlinkFn = auth.unlinkWallet;
       if (unlinkFn) {
         await unlinkFn();
-        setLocalSuccess('Wallet desconectada');
+        setLocalSuccess(t('Wallet desconectada', 'Wallet disconnected'));
         setTimeout(() => setLocalSuccess(null), 2000);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al desconectar';
+      const msg = err instanceof Error ? err.message : t('Error al desconectar', 'Error disconnecting wallet');
       setLocalError(msg);
     }
   };
@@ -60,7 +62,7 @@ export const WalletConnect: React.FC = () => {
           <svg className="inline h-6 w-6 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
           </svg>
-          Wallet Stellar
+          {t('Wallet Stellar', 'Stellar Wallet')}
         </h2>
       </div>
 
@@ -72,7 +74,7 @@ export const WalletConnect: React.FC = () => {
               <svg className="h-5 w-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              <span className="text-green-700 font-medium">Wallet Conectada</span>
+              <span className="text-green-700 font-medium">{t('Wallet Conectada', 'Wallet Connected')}</span>
             </div>
             <p className="text-sm text-gray-600 mt-2 break-all font-mono bg-gray-50 p-2 rounded">
               {auth.user.walletAddress}
@@ -87,7 +89,7 @@ export const WalletConnect: React.FC = () => {
               <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
-              Copiar
+              {t('Copiar', 'Copy')}
             </button>
 
             <button
@@ -98,14 +100,14 @@ export const WalletConnect: React.FC = () => {
               {auth.isLoading ? (
                 <>
                   <div className="animate-spin h-4 w-4 mr-1 border-t-2 border-b-2 border-current rounded-full"></div>
-                  Desconectando...
+                  {t('Desconectando...', 'Disconnecting...')}
                 </>
               ) : (
                 <>
                   <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
-                  Desconectar
+                  {t('Desconectar', 'Disconnect')}
                 </>
               )}
             </button>
@@ -115,7 +117,7 @@ export const WalletConnect: React.FC = () => {
         /* Disconnected State */
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Conecta tu wallet Freighter para habilitar transacciones en la plataforma.
+            {t('Conecta tu wallet Freighter para habilitar transacciones en la plataforma.', 'Connect your Freighter wallet to enable transactions on the platform.')}
           </p>
 
           <button
@@ -126,28 +128,28 @@ export const WalletConnect: React.FC = () => {
             {auth.isLoading ? (
               <>
                 <div className="animate-spin h-4 w-4 mr-2 border-t-2 border-b-2 border-white rounded-full"></div>
-                Conectando Wallet...
+                {t('Conectando Wallet...', 'Connecting Wallet...')}
               </>
             ) : (
               <>
                 <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M13 7H7v6h6V7z" />
                 </svg>
-                Conectar Wallet Freighter
+                {t('Conectar Wallet Freighter', 'Connect Freighter Wallet')}
               </>
             )}
           </button>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-xs text-blue-700">
-              <strong>Requisito:</strong> Debes tener Freighter instalado.{' '}
+              <strong>{t('Requisito:', 'Requirement:')}</strong> {t('Debes tener Freighter instalado.', 'You must have Freighter installed.')}{' '}
               <a
                 href="https://freighter.app"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline font-semibold hover:text-blue-900"
               >
-                Descargar Freighter
+                {t('Descargar Freighter', 'Download Freighter')}
               </a>
             </p>
           </div>

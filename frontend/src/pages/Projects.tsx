@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProjects } from '../hooks/useProjects';
 import { useDonations } from '../hooks/useDonations';
+import { useLanguage } from '../hooks/useLanguage';
 import { DonateModal } from '../components/DonateModal';
 
 const DEFAULT_PROJECT_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23d1fae5'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23065f46' font-family='Arial' font-size='22'%3EProyecto%3C/text%3E%3C/svg%3E";
@@ -10,6 +11,7 @@ const Projects: React.FC = () => {
   const navigate = useNavigate();
   const { projects, isLoading: loading, error, refreshProjects } = useProjects();
   const { makeDonation, isDonating } = useDonations();
+  const { t } = useLanguage();
   
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
@@ -46,7 +48,7 @@ const Projects: React.FC = () => {
 
   const handleDonateSubmit = async (amount: number) => {
     if (!selectedProject) {
-      throw new Error('No se seleccionó un proyecto');
+      throw new Error(t('No se seleccionó un proyecto', 'No project was selected'));
     }
 
     try {
@@ -64,7 +66,7 @@ const Projects: React.FC = () => {
       setIsDonateModalOpen(false);
       setSelectedProject(null);
     } catch (error) {
-      console.error('Error en la donación:', error);
+      console.error(t('Error en la donación:', 'Donation error:'), error);
       throw error;
     }
   };
@@ -102,11 +104,11 @@ const Projects: React.FC = () => {
           {/* Categoría */}
           <div className="mb-2">
             <span className="inline-block bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
-              {project.category === 'renewable-energy' && '⚡ Energía Renovable'}
-              {project.category === 'recycling' && '♻️ Reciclaje'}
-              {project.category === 'conservation' && '🌿 Conservación'}
-              {project.category === 'sustainable-agriculture' && '🌾 Agricultura Sostenible'}
-              {project.category === 'clean-water' && '💧 Agua Limpia'}
+              {project.category === 'renewable-energy' && t('⚡ Energía Renovable', '⚡ Renewable Energy')}
+              {project.category === 'recycling' && t('♻️ Reciclaje', '♻️ Recycling')}
+              {project.category === 'conservation' && t('🌿 Conservación', '🌿 Conservation')}
+              {project.category === 'sustainable-agriculture' && t('🌾 Agricultura Sostenible', '🌾 Sustainable Agriculture')}
+              {project.category === 'clean-water' && t('💧 Agua Limpia', '💧 Clean Water')}
             </span>
           </div>
 
@@ -137,7 +139,7 @@ const Projects: React.FC = () => {
               ></div>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              {isFunded ? 'Meta completada' : `Faltan ${remaining} XLM`}
+              {isFunded ? t('Meta completada', 'Goal completed') : t(`Faltan ${remaining} XLM`, `${remaining} XLM remaining`)}
             </p>
           </div>
 
@@ -150,7 +152,7 @@ const Projects: React.FC = () => {
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Creador</p>
                 <p className="text-sm font-semibold text-gray-900 truncate">
-                  {project.creator?.username || 'Anónimo'}
+                  {project.creator?.username || t('Anónimo', 'Anonymous')}
                 </p>
               </div>
             </div>
@@ -163,13 +165,13 @@ const Projects: React.FC = () => {
               disabled={isDonationDisabled}
               className="flex-1 bg-green-600 text-white py-2 px-3 rounded-md hover:bg-green-700 transition-colors font-medium disabled:bg-gray-400 text-sm"
             >
-              {isFunded ? '✅ Completado' : '💚 Donar'}
+              {isFunded ? t('✅ Completado', '✅ Completed') : t('💚 Donar', '💚 Donate')}
             </button>
             <button
               onClick={() => handleViewDetails(project._id || project.id)}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-md transition-colors font-medium text-sm flex items-center justify-center gap-1"
             >
-              🔍 Detalles
+              {t('🔍 Detalles', '🔍 Details')}
             </button>
           </div>
 
@@ -177,11 +179,12 @@ const Projects: React.FC = () => {
           {(project.status === 'funded' || isFunded) && (
             <div className="mt-2 bg-green-50 border border-green-200 rounded px-2 py-1 text-center">
               <p className="text-xs font-bold text-green-700">✅ Meta Alcanzada</p>
+              
             </div>
           )}
           {['draft', 'kyc_pending', 'kyc_verified', 'auto_review_failed', 'manual_review_pending'].includes(project.status) && (
             <div className="mt-2 bg-amber-50 border border-amber-200 rounded px-2 py-1 text-center">
-              <p className="text-xs font-bold text-amber-700">⏳ En validación de fondeo</p>
+              <p className="text-xs font-bold text-amber-700">{t('⏳ En validación de fondeo', '⏳ Funding validation in progress')}</p>
             </div>
           )}
         </div>
@@ -197,10 +200,10 @@ const Projects: React.FC = () => {
           <div>
             <div>
               <h1 className="text-4xl font-bold text-green-800 mb-2">
-                Proyectos Ecológicos
+                {t('Proyectos Ecológicos', 'Ecological Projects')}
               </h1>
               <p className="text-gray-600">
-                Descubre y apoya proyectos de impacto ambiental
+                {t('Descubre y apoya proyectos de impacto ambiental', 'Discover and support environmental impact projects')}
               </p>
             </div>
           </div>
@@ -210,7 +213,7 @@ const Projects: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <input
             type="text"
-            placeholder="🔍 Buscar proyectos..."
+            placeholder={t('🔍 Buscar proyectos...', '🔍 Search projects...')}
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -226,12 +229,12 @@ const Projects: React.FC = () => {
             }}
             className="px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent"
           >
-            <option value="all">Todas las categorías</option>
-            <option value="renewable-energy">⚡ Energía Renovable</option>
-            <option value="recycling">♻️ Reciclaje</option>
-            <option value="conservation">🌿 Conservación</option>
-            <option value="sustainable-agriculture">🌾 Agricultura Sostenible</option>
-            <option value="clean-water">💧 Agua Limpia</option>
+            <option value="all">{t('Todas las categorías', 'All categories')}</option>
+            <option value="renewable-energy">{t('⚡ Energía Renovable', '⚡ Renewable Energy')}</option>
+            <option value="recycling">{t('♻️ Reciclaje', '♻️ Recycling')}</option>
+            <option value="conservation">{t('🌿 Conservación', '🌿 Conservation')}</option>
+            <option value="sustainable-agriculture">{t('🌾 Agricultura Sostenible', '🌾 Sustainable Agriculture')}</option>
+            <option value="clean-water">{t('💧 Agua Limpia', '💧 Clean Water')}</option>
           </select>
         </div>
 
@@ -240,27 +243,27 @@ const Projects: React.FC = () => {
           <div className="min-h-[400px] flex items-center justify-center">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Cargando proyectos...</p>
+              <p className="text-gray-600">{t('Cargando proyectos...', 'Loading projects...')}</p>
             </div>
           </div>
         ) : error ? (
           <div className="min-h-[400px] flex items-center justify-center">
             <div className="bg-white rounded-lg shadow-lg p-8 text-center max-w-md">
-              <p className="text-lg text-red-600 mb-4 font-semibold">❌ Error al cargar los proyectos</p>
+              <p className="text-lg text-red-600 mb-4 font-semibold">{t('❌ Error al cargar los proyectos', '❌ Error loading projects')}</p>
               <p className="text-gray-600 mb-6">{error}</p>
               <button 
                 onClick={refreshProjects}
                 className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
-                Intentar nuevamente
+                {t('Intentar nuevamente', 'Try again')}
               </button>
             </div>
           </div>
         ) : filteredProjects.length === 0 ? (
           <div className="min-h-[400px] flex items-center justify-center">
             <div className="bg-white rounded-lg shadow-lg p-8 text-center max-w-md">
-              <p className="text-lg text-gray-600 mb-4 font-semibold">📭 No hay proyectos</p>
-              <p className="text-gray-500 mb-6">No encontramos proyectos que coincidan con tu búsqueda.</p>
+              <p className="text-lg text-gray-600 mb-4 font-semibold">{t('📭 No hay proyectos', '📭 No projects found')}</p>
+              <p className="text-gray-500 mb-6">{t('No encontramos proyectos que coincidan con tu búsqueda.', 'We could not find projects matching your search.')}</p>
               <button 
                 onClick={() => {
                   setSearchTerm('');
@@ -268,7 +271,7 @@ const Projects: React.FC = () => {
                 }}
                 className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
-                Ver todos
+                {t('Ver todos', 'View all')}
               </button>
             </div>
           </div>
@@ -289,17 +292,17 @@ const Projects: React.FC = () => {
                   disabled={currentPage === 1}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
                 >
-                  ← Anterior
+                    {t('← Anterior', '← Previous')}
                 </button>
                 <span className="text-gray-600 font-semibold">
-                  Página {currentPage} de {totalPages}
+                    {t(`Página ${currentPage} de ${totalPages}`, `Page ${currentPage} of ${totalPages}`)}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
                 >
-                  Siguiente →
+                    {t('Siguiente →', 'Next →')}
                 </button>
               </div>
             )}

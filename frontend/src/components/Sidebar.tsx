@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useLanguage } from '../hooks/useLanguage';
 import type { User } from '../types';
 
 // Iconos como componentes inline SVG para mantener todo en un archivo
@@ -67,6 +68,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ user, collapsed = false }: SidebarProps) => {
   const location = useLocation();
+  const { t } = useLanguage();
   const isActive = (path: string) => location.pathname === path;
 
   return (
@@ -80,7 +82,7 @@ export const Sidebar = ({ user, collapsed = false }: SidebarProps) => {
             icon={<DashboardIcon />}
             isActive={isActive('/dashboard')}
           >
-            {!collapsed && 'Dashboard'}
+            {!collapsed && t('Dashboard', 'Dashboard')}
           </NavItem>
 
           <NavItem
@@ -88,7 +90,7 @@ export const Sidebar = ({ user, collapsed = false }: SidebarProps) => {
             icon={<ProjectsIcon />}
             isActive={isActive('/projects')}
           >
-            {!collapsed && 'Proyectos'}
+            {!collapsed && t('Proyectos', 'Projects')}
           </NavItem>
 
           {user.role === 'creator' && (
@@ -97,7 +99,7 @@ export const Sidebar = ({ user, collapsed = false }: SidebarProps) => {
               icon={<CreateProjectIcon />}
               isActive={isActive('/create-project')}
             >
-              {!collapsed && 'Crear Proyecto'}
+              {!collapsed && t('Crear Proyecto', 'Create Project')}
             </NavItem>
           )}
 
@@ -106,7 +108,7 @@ export const Sidebar = ({ user, collapsed = false }: SidebarProps) => {
             icon={<WalletIcon />}
             isActive={isActive('/wallet')}
           >
-            {!collapsed && 'Wallet'}
+            {!collapsed && t('Wallet', 'Wallet')}
           </NavItem>
 
           <NavItem
@@ -114,7 +116,7 @@ export const Sidebar = ({ user, collapsed = false }: SidebarProps) => {
             icon={<ContentIcon />}
             isActive={isActive('/content')}
           >
-            {!collapsed && 'Contenido'}
+            {!collapsed && t('Contenido', 'Content')}
           </NavItem>
 
           {user.role === 'admin' && (
@@ -123,7 +125,7 @@ export const Sidebar = ({ user, collapsed = false }: SidebarProps) => {
               icon={<CurationIcon />}
               isActive={isActive('/curation')}
             >
-              {!collapsed && 'Curaduría'}
+              {!collapsed && t('Curaduría', 'Curation')}
             </NavItem>
           )}
         </div>
