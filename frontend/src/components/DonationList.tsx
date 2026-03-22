@@ -111,7 +111,7 @@ export const DonationList: React.FC<DonationListProps> = ({
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {donations.map((donation) => (
-            <tr key={donation._id || Math.random()} className="hover:bg-gray-50">
+            <tr key={donation._id || donation.txHash} className="hover:bg-gray-50">
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                 <div>
                   <p className="font-semibold">
@@ -127,7 +127,7 @@ export const DonationList: React.FC<DonationListProps> = ({
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {donation.project?.title || 'N/A'}
+                  {donation.project?.title || 'Proyecto eliminado'}
                 </span>
               </td>
               {!compact && (
